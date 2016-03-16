@@ -49,7 +49,7 @@ using namespace std;
 /// each member of this enumeration represents a token in SnuPL/0
 ///
 enum EToken {
-  tDigit=0,                         ///< a digit
+  tDigit = 0,                       ///< a digit
   tLetter,                          ///< a letter
   tPlusMinus,                       ///< '+' or '-'
   tMulDiv,                          ///< '*' or '/'

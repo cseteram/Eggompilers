@@ -146,7 +146,8 @@ ostream& CToken::print(ostream &out) const
 {
   int str_len = _value.length();
   str_len = TOKEN_STRLEN + (str_len < 64 ? str_len : 64);
-  char *str = (char*)malloc(str_len);
+
+  char *str = (char*) malloc((sizeof (char)) * str_len);
   snprintf(str, str_len, ETokenStr[GetType()], _value.c_str());
   out << dec << _line << ":" << _char << ": " << str;
   free(str);
@@ -222,9 +223,8 @@ void CScanner::InitKeywords(void)
 {
   if (keywords.size() == 0) {
     int size = sizeof(Keywords) / sizeof(Keywords[0]);
-    for (int i=0; i<size; i++) {
+    for (int i = 0; i < size; i++)
       keywords[Keywords[i].first] = Keywords[i].second;
-    }
   }
 }
 
@@ -270,10 +270,6 @@ CToken* CScanner::NewToken(EToken type, const string token)
 
 CToken* CScanner::Scan()
 {
-  EToken token;
-  string tokval;
-  char c;
-
   while (_in->good() && IsWhite(_in->peek())) GetChar();
 
   RecordStreamPosition();
@@ -281,9 +277,9 @@ CToken* CScanner::Scan()
   if (_in->eof()) return NewToken(tEOF);
   if (!_in->good()) return NewToken(tIOError);
 
-  c = GetChar();
-  tokval = c;
-  token = tUndefined;
+  char c = GetChar();
+  string tokval = c;
+  EToken token = tUndefined;
 
   switch (c) {
     case ':':
@@ -327,10 +323,11 @@ CToken* CScanner::Scan()
     default:
       if (('0' <= c) && (c <= '9')) {
         token = tDigit;
-      } else
-      if (('a' <= c) && (c <= 'z')) {
+      }
+      else if (('a' <= c) && (c <= 'z')) {
         token = tLetter;
-      } else {
+      }
+      else {
         tokval = "invalid character '";
         tokval += c;
         tokval += "'";
@@ -344,14 +341,17 @@ CToken* CScanner::Scan()
 char CScanner::GetChar()
 {
   char c = _in->get();
-  if (c == '\n') { _line++; _char = 1; } else _char++;
+  if (c == '\n')
+    _line++; _char = 1;
+  else _char++;
   return c;
 }
 
 string CScanner::GetChar(int n)
 {
   string str;
-  for (int i=0; i<n; i++) str += GetChar();
+  for (int i=0; i<n; i++)
+    str += GetChar();
   return str;
 }
 
