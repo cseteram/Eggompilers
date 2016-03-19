@@ -1,4 +1,4 @@
-//------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 /// @brief SnuPL/0 scanner
 /// @author Bernhard Egger <bernhard@csap.snu.ac.kr>
 /// @section changelog Change Log
@@ -275,20 +275,21 @@ CToken* CScanner::NewToken(EToken type, const string token)
 /* TODO: modify to implement SnuPL/1 */
 CToken* CScanner::Scan()
 {
-  while (_in->good() && IsWhite(_in->peek()))
-    GetChar();
+  bool onRemove = true;
 
-  /* TODO: remove all white spaces and comments before scanning token
-   * for example:
-  while (_in->good() && (IsWhite(_in->peek()) || IsComment(_in->peek())))
-  {
-    while (_in->good() && IsWhite(_in->peek()))
+  while(onRemove) {
+    onRemove = false;
+
+    while (_in->good() && IsWhite(_in->peek())) {
       GetChar();
+      onRemove = true;
+    }
 
-    if (_in->good() && IsComment(_in->peek()))
+    if (_in->good() && IsComment(_in->peek())) {
       DeleteLine();
+      onRemove = true;
+    }
   }
-  */
 
   RecordStreamPosition();
 
@@ -376,7 +377,45 @@ string CScanner::GetChar(int n)
   return str;
 }
 
+void CScanner::DeleteLine()
+{
+  while (_in->good() && (_in->eof() || _in->peek() != '\n'))
+    GetChar();
+
+  if (_in->good() && _in->peek() == '\n')
+    GetChar();
+}
+
 bool CScanner::IsWhite(char c) const
 {
   return ((c == ' ') || (c == '\n') || (c == '\t'));
 }
+
+bool CScanner::IsComment(char c)
+{
+  bool retval = false;
+
+  if (c == '/')
+  {
+    _in->get();
+    if (_in->peek() == '/') retval = true;
+    _in->unget();
+  }
+
+  return retval;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -274,12 +274,22 @@ class CScanner {
     /// @retval string containing the characters read
     string GetChar(int n);
 
+    /// @brief delete one line from the input stream
+    void DeleteLine(void);
+
     /// @brief check if a character is a white character
     ///
     /// @param c character
     /// @retval true character is white space
     /// @retval false character is not white space
     bool IsWhite(char c) const;
+
+    /// @brief check if two characters are representing comment line
+    ///
+    /// @param c character
+    /// @retval true characters are comment
+    /// @retval false characters are not comment
+    bool IsComment(char c);
 
     /// @}
 
