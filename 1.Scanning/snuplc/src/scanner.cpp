@@ -1,5 +1,5 @@
-------------------------------------------------------------------------------
-/// @brief SnuPL/0 scanner
+//------------------------------------------------------------------------------
+/// @brief SnuPL/1 scanner
 /// @author Bernhard Egger <bernhard@csap.snu.ac.kr>
 /// @section changelog Change Log
 /// 2012/09/14 Bernhard Egger created
@@ -275,20 +275,12 @@ CToken* CScanner::NewToken(EToken type, const string token)
 /* TODO: modify to implement SnuPL/1 */
 CToken* CScanner::Scan()
 {
-  bool onRemove = true;
-
-  while(onRemove) {
-    onRemove = false;
-
-    while (_in->good() && IsWhite(_in->peek())) {
+  while(OnRemove()) {
+    while (_in->good() && IsWhite(_in->peek()))
       GetChar();
-      onRemove = true;
-    }
 
-    if (_in->good() && IsComment(_in->peek())) {
+    if (IsComment(_in->peek()))
       DeleteLine();
-      onRemove = true;
-    }
   }
 
   RecordStreamPosition();
@@ -297,7 +289,7 @@ CToken* CScanner::Scan()
   if (!_in->good()) return NewToken(tIOError);
 
   char c = GetChar();
-  string tokval = c;
+  string tokval(1, c);
   EToken token = tUndefined;
 
   /* TODO: add cases */
@@ -363,8 +355,10 @@ CToken* CScanner::Scan()
 char CScanner::GetChar()
 {
   char c = _in->get();
-  if (c == '\n')
-    _line++; _char = 1;
+  if (c == '\n') {
+    _line++;
+    _char = 1;
+  }
   else _char++;
   return c;
 }
@@ -372,10 +366,16 @@ char CScanner::GetChar()
 string CScanner::GetChar(int n)
 {
   string str;
-  for (int i=0; i<n; i++)
+  for (int i = 0; i < n; i++)
     str += GetChar();
   return str;
 }
+
+bool CScanner::OnRemove()
+{
+  return (_in->good() && (IsWhite(_in->peek()) || IsComment(_in->peek())));
+}
+
 
 void CScanner::DeleteLine()
 {
@@ -404,18 +404,3 @@ bool CScanner::IsComment(char c)
 
   return retval;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

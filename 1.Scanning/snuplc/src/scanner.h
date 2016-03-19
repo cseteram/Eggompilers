@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-/// @brief SnuPL/0 scanner
+/// @brief SnuPL/1 scanner
 /// @author Bernhard Egger <bernhard@csap.snu.ac.kr>
 /// @section changelog Change Log
 /// 2012/09/14 Bernhard Egger created
@@ -183,7 +183,7 @@ ostream& operator<<(ostream &out, const CToken *t);
 //------------------------------------------------------------------------------
 /// @brief scanner
 ///
-/// used by CParser to scan (tokenize) SnuPL/0 code
+/// used by CParser to scan (tokenize) SnuPL/1 code
 ///
 class CScanner {
   public:
@@ -273,6 +273,12 @@ class CScanner {
     /// @param n number of characters to read
     /// @retval string containing the characters read
     string GetChar(int n);
+
+    /// @brief check whether a character is a white character or comment
+    ///
+    /// @retval true character is white space or comment
+    /// @retval false character is not white space or comment
+    bool OnRemove(void);
 
     /// @brief delete one line from the input stream
     void DeleteLine(void);
