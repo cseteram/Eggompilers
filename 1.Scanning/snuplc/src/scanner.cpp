@@ -47,8 +47,10 @@ using namespace std;
 //------------------------------------------------------------------------------
 // token names
 //
+/* TODO: add additional tokens to implement SnuPL/1 */
 #define TOKEN_STRLEN 16
 
+/* TODO: add additional tokens to implement SnuPL/1 */
 char ETokenName[][TOKEN_STRLEN] = {
   "tDigit",                         ///< a digit
   "tLetter",                        ///< a letter
@@ -71,6 +73,8 @@ char ETokenName[][TOKEN_STRLEN] = {
 // format strings used for printing tokens
 //
 
+/* TODO: add additional tokens to implement SnuPL/1 */
+/* Used to feed to printf */
 char ETokenStr[][TOKEN_STRLEN] = {
   "tDigit (%s)",                    ///< a digit
   "tLetter (%s)",                   ///< a letter
@@ -268,9 +272,23 @@ CToken* CScanner::NewToken(EToken type, const string token)
   return new CToken(_saved_line, _saved_char, type, token);
 }
 
+/* TODO: modify to implement SnuPL/1 */
 CToken* CScanner::Scan()
 {
-  while (_in->good() && IsWhite(_in->peek())) GetChar();
+  while (_in->good() && IsWhite(_in->peek()))
+    GetChar();
+
+  /* TODO: remove all white spaces and comments before scanning token
+   * for example:
+  while (_in->good() && (IsWhite(_in->peek()) || IsComment(_in->peek())))
+  {
+    while (_in->good() && IsWhite(_in->peek()))
+      GetChar();
+
+    if (_in->good() && IsComment(_in->peek()))
+      DeleteLine();
+  }
+  */
 
   RecordStreamPosition();
 
@@ -281,6 +299,7 @@ CToken* CScanner::Scan()
   string tokval = c;
   EToken token = tUndefined;
 
+  /* TODO: add cases */
   switch (c) {
     case ':':
       if (_in->peek() == '=') {
@@ -324,9 +343,11 @@ CToken* CScanner::Scan()
       if (('0' <= c) && (c <= '9')) {
         token = tDigit;
       }
+
       else if (('a' <= c) && (c <= 'z')) {
         token = tLetter;
       }
+
       else {
         tokval = "invalid character '";
         tokval += c;
@@ -357,5 +378,5 @@ string CScanner::GetChar(int n)
 
 bool CScanner::IsWhite(char c) const
 {
-  return ((c == ' ') || (c == '\n'));
+  return ((c == ' ') || (c == '\n') || (c == '\t'));
 }
