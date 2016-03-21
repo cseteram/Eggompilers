@@ -331,7 +331,6 @@ CToken* CScanner::NewToken(EToken type, const string token)
   return new CToken(_saved_line, _saved_char, type, token);
 }
 
-/* TODO: modify to implement SnuPL/1 */
 CToken* CScanner::Scan()
 {
   while(OnRemove()) {
@@ -351,14 +350,14 @@ CToken* CScanner::Scan()
   string tokval(1, c);
   EToken token = tUndefined;
 
-  /* TODO: add cases */
   switch (c) {
     case ':':
-      if (_in->peek() == '=') {
+      if (_in->good() && (_in->peek() == '=')) {
         tokval += GetChar();
         token = tAssign;
       }
-      else token = tColon;
+      else if (_in->good())
+        token = tColon;
       break;
 
     case '+':
@@ -373,7 +372,7 @@ CToken* CScanner::Scan()
 
     case '&':
     case '|':
-      if (_in->peek() == token) {
+      if (_in->good() && (_in->peek() == token)) {
         tokval += GetChar();
         token = tAndOr;
       }
@@ -390,9 +389,11 @@ CToken* CScanner::Scan()
 
     case '<':
     case '>':
-      token = tRelOp;
-      if (_in->peek() == '=')
-        tokval += GetChar();
+      if (_in->good()) {
+        token = tRelOp;
+        if (_in->peek() == '=')
+          tokval += GetChar();
+      }
       break;
 
     case ';':
@@ -407,11 +408,14 @@ CToken* CScanner::Scan()
       token = tDot;
       break;
 
-      /* TODO: proper work please */
+    /* TODO: char */
     case '\'':
+      // use subroutine
       break;
-      
+    
+    /* TODO: string */
     case '\"':
+      // use subroutine
       break;
 
     case '[':
@@ -434,13 +438,16 @@ CToken* CScanner::Scan()
       /* TODO: number */
       if (('0' <= c) && (c <= '9')) {
         token = tNumber;
-        // call subroutine to parse integer
+        // use subroutine
+        // use _in->good() before using _in->peek() (?)
       }
 
       /* TODO: identifier and keyword */
       else if (('a' <= c) && (c <= 'z')) {
         token = tIdent;
+        // use subroutine
         // use map<string, EToken> CScanner::keywords;
+        // use _in->good() before using _in->peek() (?)
       }
 
       else {
