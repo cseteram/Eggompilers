@@ -47,21 +47,41 @@ using namespace std;
 //------------------------------------------------------------------------------
 // token names
 //
-/* TODO: add additional tokens to implement SnuPL/1 */
-#define TOKEN_STRLEN 16
+#define TOKEN_STRLEN 32
 
 /* TODO: add additional tokens to implement SnuPL/1 */
 char ETokenName[][TOKEN_STRLEN] = {
-  "tDigit",                         ///< a digit
-  "tLetter",                        ///< a letter
+  "kModule",                        ///< module
+  "kBegin",                         ///< begin
+  "kEnd",                           ///< end
+  "kType",                          ///< boolean or char or integer
+  "kBool",                          ///< true or false
+  "kIf",                            ///< if
+  "kThen",                          ///< then
+  "kElse",                          ///< else
+  "kWhile",                         ///< while
+  "kDo",                            ///< do
+  "kReturn",                        ///< return
+  "kVar",                           ///< var
+  "kProc",                          ///< procedure
+  "kFunc",                          ///< function
+
   "tPlusMinus",                     ///< '+' or '-'
   "tMulDiv",                        ///< '*' or '/'
+  "tAndOr",                         ///< '&&' or '||'
+  "tNot",                           ///< a not operator
   "tRelOp",                         ///< relational operator
   "tAssign",                        ///< assignment operator
   "tSemicolon",                     ///< a semicolon
+  "tColon",                         ///< a colon
+  "tComma",                         ///< a comma
   "tDot",                           ///< a dot
+  "tSingleQuot",                    ///< a single quotation
+  "tDoubleQuot",                    ///< a double quotation
   "tLBrak",                         ///< a left bracket
   "tRBrak",                         ///< a right bracket
+  "tLParen",                        ///< a left paren
+  "tRParen",                        ///< a right paren
 
   "tEOF",                           ///< end of file
   "tIOError",                       ///< I/O error
@@ -76,16 +96,37 @@ char ETokenName[][TOKEN_STRLEN] = {
 /* TODO: add additional tokens to implement SnuPL/1 */
 /* Used to feed to printf */
 char ETokenStr[][TOKEN_STRLEN] = {
-  "tDigit (%s)",                    ///< a digit
-  "tLetter (%s)",                   ///< a letter
+  "kModule",                        ///< module
+  "kBegin",                         ///< begin
+  "kEnd",                           ///< end
+  "kType (%s)",                     ///< boolean or char or integer
+  "kBool (%s)",                     ///< true or false
+  "kIf",                            ///< if
+  "kThen",                          ///< then
+  "kElse",                          ///< else
+  "kWhile",                         ///< while
+  "kDo",                            ///< do
+  "kReturn",                        ///< return
+  "kVar",                           ///< var
+  "kProc",                          ///< procedure
+  "kFunc",                          ///< function
+
   "tPlusMinus (%s)",                ///< '+' or '-'
   "tMulDiv (%s)",                   ///< '*' or '/'
+  "tAndOr (%s)",                    ///< '&&' or '||'
+  "tNot",                           ///< a not operator
   "tRelOp (%s)",                    ///< relational operator
   "tAssign",                        ///< assignment operator
   "tSemicolon",                     ///< a semicolon
+  "tColon",                         ///< a colon
+  "tComma",                         ///< a comma
   "tDot",                           ///< a dot
+  "tSingleQuot",                    ///< a single quotation
+  "tDoubleQuot",                    ///< a double quotation
   "tLBrak",                         ///< a left bracket
   "tRBrak",                         ///< a right bracket
+  "tLParen",                        ///< a left paren
+  "tRParen",                        ///< a right paren
 
   "tEOF",                           ///< end of file
   "tIOError",                       ///< I/O error
@@ -98,6 +139,23 @@ char ETokenStr[][TOKEN_STRLEN] = {
 //
 pair<const char*, EToken> Keywords[] =
 {
+  {"module", kModule},
+  {"begin", kBegin},
+  {"end", kEnd},
+  {"boolean", kType},
+  {"char", kType},
+  {"integer", kType},
+  {"true", kBool},
+  {"false", kBool},
+  {"if", kIf},
+  {"then", kThen},
+  {"else", kElse},
+  {"while", kWhile},
+  {"do", kDo},
+  {"return", kReturn},
+  {"var", kVar},
+  {"procedure", kProc},
+  {"function", kFunc}
 };
 
 
@@ -226,7 +284,7 @@ CScanner::~CScanner()
 void CScanner::InitKeywords(void)
 {
   if (keywords.size() == 0) {
-    int size = sizeof(Keywords) / sizeof(Keywords[0]);
+    int size = sizeof (Keywords) / sizeof (Keywords[0]);
     for (int i = 0; i < size; i++)
       keywords[Keywords[i].first] = Keywords[i].second;
   }
@@ -299,6 +357,7 @@ CToken* CScanner::Scan()
         tokval += GetChar();
         token = tAssign;
       }
+      else token = tColon;
       break;
 
     case '+':
@@ -311,25 +370,64 @@ CToken* CScanner::Scan()
       token = tMulDiv;
       break;
 
+    case '&':
+    case '|':
+      if (_in->peek() == token) {
+        tokval += GetChar();
+        token = tAndOr;
+      }
+      break;
+
+    case '!':
+      token = tNot;
+      break;
+
     case '=':
     case '#':
       token = tRelOp;
+      break;
+
+    case '<':
+    case '>':
+      token = tRelop;
+      if (_in->peek() == '=')
+        tokval += GetChar();
       break;
 
     case ';':
       token = tSemicolon;
       break;
 
+    case ',':
+      token = tComma;
+      break;
+
     case '.':
       token = tDot;
       break;
 
-    case '(':
+    case '\'':
+      token = tSingleQuot;
+      break;
+      
+    case '\"':
+      token = tDoubleQuot;
+      break;
+
+    case '[':
       token = tLBrak;
       break;
 
-    case ')':
+    case ']':
       token = tRBrak;
+      break;
+
+    case '(':
+      token = tLParen;
+      break;
+
+    case ')':
+      token = tRParen;
       break;
 
     default:

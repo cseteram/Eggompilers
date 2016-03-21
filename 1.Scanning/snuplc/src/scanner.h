@@ -44,21 +44,42 @@
 using namespace std;
 
 //------------------------------------------------------------------------------
-/// @brief SnuPL/-1 token type
+/// @brief SnuPL/1 token type
 ///
-/// each member of this enumeration represents a token in SnuPL/0
+/// each member of this enumeration represents a token in SnuPL/1
 ///
 enum EToken {
-  tDigit = 0,                       ///< a digit
-  tLetter,                          ///< a letter
+  kModule = 0,                      ///< module
+  kBegin,                           ///< begin
+  kEnd,                             ///< end
+  kType,                            ///< boolean or char or integer
+  kBool,                            ///< true or false
+  kIf,                              ///< if
+  kThen,                            ///< then
+  kElse,                            ///< else
+  kWhile,                           ///< while
+  kDo,                              ///< do
+  kReturn,                          ///< return
+  kVar,                             ///< var
+  kProc,                            ///< procedure
+  kFunc,                            ///< function
+
   tPlusMinus,                       ///< '+' or '-'
   tMulDiv,                          ///< '*' or '/'
+  tAndOr,                           ///< '&&' or '||'
+  tNot,                             ///< a not operator
   tRelOp,                           ///< relational operator
   tAssign,                          ///< assignment operator
   tSemicolon,                       ///< a semicolon
+  tColon,                           ///< a colon
+  tComma,                           ///< a comma
   tDot,                             ///< a dot
+  tSingleQuot,                      ///< a single quotation
+  tDoubleQuot,                      ///< a double quotation
   tLBrak,                           ///< a left bracket
   tRBrak,                           ///< a right bracket
+  tLParen,                          ///< a left paren
+  tRParen,                          ///< a right paren
 
   tEOF,                             ///< end of file
   tIOError,                         ///< I/O error
