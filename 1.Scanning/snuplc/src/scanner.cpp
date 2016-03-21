@@ -49,12 +49,11 @@ using namespace std;
 //
 #define TOKEN_STRLEN 32
 
-/* TODO: add additional tokens to implement SnuPL/1 */
 char ETokenName[][TOKEN_STRLEN] = {
   "kModule",                        ///< module
   "kBegin",                         ///< begin
   "kEnd",                           ///< end
-  "kType",                          ///< boolean or char or integer
+  "kType",                          ///< boolean or char or integer (type)
   "kBool",                          ///< true or false
   "kIf",                            ///< if
   "kThen",                          ///< then
@@ -66,6 +65,10 @@ char ETokenName[][TOKEN_STRLEN] = {
   "kProc",                          ///< procedure
   "kFunc",                          ///< function
 
+  "tIdent",                         ///< an identifier
+  "tNumber",                        ///< a number
+  "tChar",                          ///< a character
+  "tString",                        ///< a string
   "tPlusMinus",                     ///< '+' or '-'
   "tMulDiv",                        ///< '*' or '/'
   "tAndOr",                         ///< '&&' or '||'
@@ -76,8 +79,6 @@ char ETokenName[][TOKEN_STRLEN] = {
   "tColon",                         ///< a colon
   "tComma",                         ///< a comma
   "tDot",                           ///< a dot
-  "tSingleQuot",                    ///< a single quotation
-  "tDoubleQuot",                    ///< a double quotation
   "tLBrak",                         ///< a left bracket
   "tRBrak",                         ///< a right bracket
   "tLParen",                        ///< a left paren
@@ -93,8 +94,6 @@ char ETokenName[][TOKEN_STRLEN] = {
 // format strings used for printing tokens
 //
 
-/* TODO: add additional tokens to implement SnuPL/1 */
-/* Used to feed to printf */
 char ETokenStr[][TOKEN_STRLEN] = {
   "kModule",                        ///< module
   "kBegin",                         ///< begin
@@ -111,6 +110,10 @@ char ETokenStr[][TOKEN_STRLEN] = {
   "kProc",                          ///< procedure
   "kFunc",                          ///< function
 
+  "tIdent (%s)",                    ///< an identifier
+  "tNumber (%s)",                   ///< a number
+  "tChar (%s)",                     ///< a character
+  "tString (%s)",                   ///< a string
   "tPlusMinus (%s)",                ///< '+' or '-'
   "tMulDiv (%s)",                   ///< '*' or '/'
   "tAndOr (%s)",                    ///< '&&' or '||'
@@ -121,8 +124,6 @@ char ETokenStr[][TOKEN_STRLEN] = {
   "tColon",                         ///< a colon
   "tComma",                         ///< a comma
   "tDot",                           ///< a dot
-  "tSingleQuot",                    ///< a single quotation
-  "tDoubleQuot",                    ///< a double quotation
   "tLBrak",                         ///< a left bracket
   "tRBrak",                         ///< a right bracket
   "tLParen",                        ///< a left paren
@@ -337,7 +338,7 @@ CToken* CScanner::Scan()
     while (_in->good() && IsWhite(_in->peek()))
       GetChar();
 
-    if (IsComment(_in->peek()))
+    if (_in->good() && IsComment(_in->peek()))
       DeleteLine();
   }
 
@@ -406,12 +407,11 @@ CToken* CScanner::Scan()
       token = tDot;
       break;
 
+      /* TODO: proper work please */
     case '\'':
-      token = tSingleQuot;
       break;
       
     case '\"':
-      token = tDoubleQuot;
       break;
 
     case '[':
@@ -431,12 +431,16 @@ CToken* CScanner::Scan()
       break;
 
     default:
+      /* TODO: number */
       if (('0' <= c) && (c <= '9')) {
-        token = tDigit;
+        token = tNumber;
+        // call subroutine to parse integer
       }
 
+      /* TODO: identifier and keyword */
       else if (('a' <= c) && (c <= 'z')) {
-        token = tLetter;
+        token = tIdent;
+        // use map<string, EToken> CScanner::keywords;
       }
 
       else {
@@ -477,10 +481,10 @@ bool CScanner::OnRemove()
 
 void CScanner::DeleteLine()
 {
-  while (_in->good() && (_in->eof() || _in->peek() != '\n'))
+  while (_in->good() && (_in->peek() != '\n'))
     GetChar();
 
-  if (_in->good() && _in->peek() == '\n')
+  if (_in->good() && (_in->peek() == '\n'))
     GetChar();
 }
 
@@ -496,6 +500,7 @@ bool CScanner::IsComment(char c)
   if (c == '/')
   {
     _in->get();
+    if (!_in->good()) return false;
     if (_in->peek() == '/') retval = true;
     _in->unget();
   }

@@ -64,6 +64,10 @@ enum EToken {
   kProc,                            ///< procedure
   kFunc,                            ///< function
 
+  tIdent,                           ///< an identifier
+  tNumber,                          ///< a number
+  tChar,                            ///< a character
+  tString,                          ///< a string
   tPlusMinus,                       ///< '+' or '-'
   tMulDiv,                          ///< '*' or '/'
   tAndOr,                           ///< '&&' or '||'
@@ -74,8 +78,6 @@ enum EToken {
   tColon,                           ///< a colon
   tComma,                           ///< a comma
   tDot,                             ///< a dot
-  tSingleQuot,                      ///< a single quotation
-  tDoubleQuot,                      ///< a double quotation
   tLBrak,                           ///< a left bracket
   tRBrak,                           ///< a right bracket
   tLParen,                          ///< a left paren
