@@ -390,7 +390,7 @@ CToken* CScanner::Scan()
 
     case '<':
     case '>':
-      token = tRelop;
+      token = tRelOp;
       if (_in->peek() == '=')
         tokval += GetChar();
       break;
