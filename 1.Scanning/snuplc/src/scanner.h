@@ -319,6 +319,20 @@ class CScanner {
     /// @retval true characters are comment
     /// @retval false characters are not comment
     bool IsComment(char c);
+    
+    /// @brief check if a character is a letter
+    ///
+    /// @param c character
+    /// @retval true character is a letter
+    /// @retval false character is not a digit
+    bool IsLetter(char c);
+    
+    /// @brief check if a character is a digit
+    ///
+    /// @param c character
+    /// @retval true character is a digit
+    /// @retval false character is not a digit
+    bool IsDigit(char c);
 
     /// @}
 

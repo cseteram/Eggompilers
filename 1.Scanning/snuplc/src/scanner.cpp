@@ -372,7 +372,7 @@ CToken* CScanner::Scan()
 
     case '&':
     case '|':
-      if (_in->good() && (_in->peek() == token)) {
+      if (_in->good() && (_in->peek() == c)) {
         tokval += GetChar();
         token = tAndOr;
       }
@@ -408,12 +408,10 @@ CToken* CScanner::Scan()
       token = tDot;
       break;
 
-    /* TODO: char */
     case '\'':
-      // use subroutine
+      // use subroutine		
       break;
-    
-    /* TODO: string */
+
     case '\"':
       // use subroutine
       break;
@@ -435,19 +433,34 @@ CToken* CScanner::Scan()
       break;
 
     default:
-      /* TODO: number */
-      if (('0' <= c) && (c <= '9')) {
+			// number
+      if (IsDigit(c)) {
         token = tNumber;
-        // use subroutine
-        // use _in->good() before using _in->peek() (?)
+				while (_in->good()) {
+					char nc = _in->peek();
+					if (!IsDigit(nc)) 
+						break;
+					tokval += GetChar();
+				}
       }
 
-      /* TODO: identifier and keyword */
-      else if (('a' <= c) && (c <= 'z')) {
+      // identifier or keywords
+      else if (IsLetter(c)) {
         token = tIdent;
-        // use subroutine
-        // use map<string, EToken> CScanner::keywords;
-        // use _in->good() before using _in->peek() (?)
+				while (_in->good()) {
+					char nc = _in->peek();
+					if (!IsLetter(nc) && !IsDigit(nc))
+						break;
+					tokval += GetChar();
+				}
+        
+				auto iter = keywords.find(tokval);
+				if (iter != keywords.end()) {
+					token = iter->second;
+				}
+				else {
+					keywords[tokval] = token;
+				}
       }
 
       else {
@@ -513,4 +526,19 @@ bool CScanner::IsComment(char c)
   }
 
   return retval;
+}
+
+bool CScanner::IsLetter(char c) 
+{
+	if ('A' <= c && c <= 'Z')
+		return true;
+	if ('a' <= c && c <= 'z')
+		return true;
+	
+	return c == '_';
+}
+
+bool CScanner::IsDigit(char c)
+{
+	return '0' <= c && c <= '9';   
 }
