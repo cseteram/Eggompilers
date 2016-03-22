@@ -433,34 +433,34 @@ CToken* CScanner::Scan()
       break;
 
     default:
-			// number
+      // number
       if (IsDigit(c)) {
         token = tNumber;
-				while (_in->good()) {
-					char nc = _in->peek();
-					if (!IsDigit(nc)) 
-						break;
-					tokval += GetChar();
-				}
+        while (_in->good()) {
+          char nc = _in->peek();
+          if (!IsDigit(nc)) 
+            break;
+          tokval += GetChar();
+        }
       }
 
       // identifier or keywords
       else if (IsLetter(c)) {
         token = tIdent;
-				while (_in->good()) {
-					char nc = _in->peek();
-					if (!IsLetter(nc) && !IsDigit(nc))
-						break;
-					tokval += GetChar();
-				}
+        while (_in->good()) {
+          char nc = _in->peek();
+          if (!IsLetter(nc) && !IsDigit(nc))
+            break;
+          tokval += GetChar();
+        }
         
-				auto iter = keywords.find(tokval);
-				if (iter != keywords.end()) {
-					token = iter->second;
-				}
-				else {
-					keywords[tokval] = token;
-				}
+        auto iter = keywords.find(tokval);
+        if (iter != keywords.end()) {
+          token = iter->second;
+        }
+        else {
+          keywords[tokval] = token;
+        }
       }
 
       else {
@@ -530,15 +530,15 @@ bool CScanner::IsComment(char c)
 
 bool CScanner::IsLetter(char c) 
 {
-	if ('A' <= c && c <= 'Z')
-		return true;
-	if ('a' <= c && c <= 'z')
-		return true;
-	
-	return c == '_';
+  if ('A' <= c && c <= 'Z')
+    return true;
+  if ('a' <= c && c <= 'z')
+    return true;
+  
+  return c == '_';
 }
 
 bool CScanner::IsDigit(char c)
 {
-	return '0' <= c && c <= '9';   
+  return '0' <= c && c <= '9';   
 }
