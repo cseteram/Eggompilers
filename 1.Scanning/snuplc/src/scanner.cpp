@@ -410,26 +410,38 @@ CToken* CScanner::Scan()
 
     case '\'':
       token = tChar;
-      if (_in->good()) {
+      while (_in->good()) {
         char nc = _in->peek();
         if (!IsCharacter(nc))
           token = tUndefined;
-        tokval += GetChar();
-      }
-      while (_in->good()) {
-        char nc = _in->peek();
-        if (IsWhite(nc))
-          break;
         tokval += GetChar();
         if (nc == '\'')
           break;
       }
       
-      if (tokval.size() < 3 || tokval[2] != '\'') // TODO : fix it!
+      if (tokval.size() < 3 || tokval.size() > 5)
         token = tUndefined;
+      else if (tokval.size() == 4) {
+        if (tokval[1] != '\\')
+          token = tUndefined;
+        else {
+          char t = tokval[2];
+          switch (t) {
+            case 'n':
+            case 't':
+            case '\"':
+            case '\'':
+            case '\\':
+            case '0':
+              token = tChar;
+              break;
+            default:
+              token = tUndefined;
+          }    
+        }
+      }
       if (token == tChar)
         tokval = tokval.substr(1, (int)tokval.size() - 2);
-      
       break;
 
     case '\"':
@@ -446,7 +458,6 @@ CToken* CScanner::Scan()
         token = tUndefined;
       if (token == tString)
         tokval = tokval.substr(1, (int)tokval.size() - 2);
-        
       break;
 
     case '[':
