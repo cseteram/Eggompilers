@@ -333,6 +333,13 @@ class CScanner {
     /// @retval true character is a digit
     /// @retval false character is not a digit
     bool IsDigit(char c);
+    
+    /// @brief check if a character is in ASCIIchar or escape character
+    ///
+    /// @param c character
+    /// @retval true character is in ASCIIchar or escape character
+    /// @retval false character is not in ASCIIchar and escape character
+    bool IsCharacter(char c);
 
     /// @}
 

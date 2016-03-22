@@ -409,11 +409,44 @@ CToken* CScanner::Scan()
       break;
 
     case '\'':
-      // use subroutine		
+      token = tChar;
+      if (_in->good()) {
+        char nc = _in->peek();
+        if (!IsCharacter(nc))
+          token = tUndefined;
+        tokval += GetChar();
+      }
+      while (_in->good()) {
+        char nc = _in->peek();
+        if (IsWhite(nc))
+          break;
+        tokval += GetChar();
+        if (nc == '\'')
+          break;
+      }
+      
+      if (tokval.size() < 3 || tokval[2] != '\'') // TODO : fix it!
+        token = tUndefined;
+      if (token == tChar)
+        tokval = tokval.substr(1, (int)tokval.size() - 2);
+      
       break;
 
     case '\"':
-      // use subroutine
+      token = tString;
+      while (_in->good()) {
+        char nc = _in->peek();
+        if (!IsCharacter(nc)) 
+          token = tUndefined;
+        tokval += GetChar();
+        if (nc == '\"')
+          break;
+      }
+      if (tokval.size() < 2 || tokval.back() != '\"')
+        token = tUndefined;
+      if (token == tString)
+        tokval = tokval.substr(1, (int)tokval.size() - 2);
+        
       break;
 
     case '[':
@@ -541,4 +574,10 @@ bool CScanner::IsLetter(char c)
 bool CScanner::IsDigit(char c)
 {
   return '0' <= c && c <= '9';   
+}
+
+bool CScanner::IsCharacter(char c)
+{
+  // TODO : check c is a character
+  return true;  
 }
