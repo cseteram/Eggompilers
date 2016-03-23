@@ -409,39 +409,58 @@ CToken* CScanner::Scan()
       break;
 
     case '\'':
-      token = tChar;
-      while (_in->good()) {
-        char nc = _in->peek();
-        if (nc < 32 || nc >= 128)
-          token = tUndefined;
-        tokval += GetChar();
-        if (nc == '\'')
-          break;
-      }
-      
-      if (tokval.size() < 3 || tokval.size() > 5)
-        token = tUndefined;
-      else if (tokval.size() == 4) {
-        if (tokval[1] != '\\')
-          token = tUndefined;
-        else {
-          char t = tokval[2];
-          switch (t) {
-            case 'n':
-            case 't':
-            case '\"':
-            case '\'':
-            case '\\':
-            case '0':
+      {
+        bool faced_escape = false;
+        bool filled = false;
+        
+        while (_in->good()) {
+          char nc = _in->peek();
+          if (!filled && !faced_escape && nc == '\'') {
+            tokval += GetChar();
+            break;
+          }
+          else if (filled) {
+            if (nc == '\'') {
               token = tChar;
+              tokval += GetChar();
+            }
+            break;
+          }
+          else if (nc < 32 || nc >= 128) {
+            tokval += GetChar();
+            break;
+          }
+          else if (nc == '\\' && !faced_escape) {
+            faced_escape = true;
+            tokval += GetChar();
+          }
+          else if (faced_escape) {
+            bool valid = true;
+            switch (nc) {
+              case 'n':
+              case 't':
+              case '\"':
+              case '\'':
+              case '\\':
+              case '0':
+                faced_escape = false;
+                filled = true;
+                tokval += GetChar();
+                break;
+              default:
+                valid = false;
+                break; 
+            }
+            
+            if (!valid) 
               break;
-            default:
-              token = tUndefined;
-          }    
+          }
+          else {
+            tokval += GetChar();
+            filled = true;
+          }
         }
       }
-      if (token == tChar)
-        tokval = tokval.substr(1, (int)tokval.size() - 2);
       break;
 
     case '\"':
