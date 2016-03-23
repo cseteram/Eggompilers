@@ -412,7 +412,7 @@ CToken* CScanner::Scan()
       token = tChar;
       while (_in->good()) {
         char nc = _in->peek();
-        if (!IsCharacter(nc))
+        if (nc < 32 || nc >= 128)
           token = tUndefined;
         tokval += GetChar();
         if (nc == '\'')
@@ -446,15 +446,38 @@ CToken* CScanner::Scan()
 
     case '\"':
       token = tString;
-      while (_in->good()) {
-        char nc = _in->peek();
-        if (!IsCharacter(nc)) 
-          token = tUndefined;
-        tokval += GetChar();
-        if (nc == '\"')
-          break;
+      {
+        bool faced_escape = false;
+        while (_in->good()) {
+          char nc = _in->peek();
+          if (nc < 32 || nc >= 128) // if nc is not ASCIIChar
+            token = tUndefined;
+          else if (nc == '\\') {
+            faced_escape ^= true;
+          }
+          else if (faced_escape) {
+            faced_escape = false;
+            switch (nc) {
+              case 'n':
+              case 't':
+              case '\"':
+              case '\'':
+              case '0':
+                break;
+              default:
+                token = tUndefined;
+                break;
+            }
+          }
+          else if (nc == '\"') {
+            tokval += GetChar();
+            break;
+          }
+          
+          tokval += GetChar();       
+        }
       }
-      if (tokval.size() < 2 || tokval.back() != '\"')
+      if (tokval.back() != '\"')
         token = tUndefined;
       if (token == tString)
         tokval = tokval.substr(1, (int)tokval.size() - 2);
@@ -585,10 +608,4 @@ bool CScanner::IsLetter(char c)
 bool CScanner::IsDigit(char c)
 {
   return '0' <= c && c <= '9';   
-}
-
-bool CScanner::IsCharacter(char c)
-{
-  // TODO : check c is a character
-  return true;  
 }
