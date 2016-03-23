@@ -451,7 +451,7 @@ CToken* CScanner::Scan()
         token = tUndefined;
 
       if (token == tString)
-        tokval = tokval.substr(1, (int) tokval.size() - 1);
+        tokval = tokval.substr(1, (int) tokval.size() - 2);
       break;
 
     case '[':
@@ -539,10 +539,10 @@ bool CScanner::OnRemove()
 
 void CScanner::DeleteLine()
 {
-  while (_in->good() && (_in->peek() != '\n'))
+  while (_in->good() && _in->peek() != '\n' && _in->peek() != EOF)
     GetChar();
 
-  if (_in->good() && (_in->peek() == '\n'))
+  if (_in->good() && (_in->peek() == '\n' || _in->peek() == EOF))
     GetChar();
 }
 
@@ -574,7 +574,9 @@ void CScanner::ScanString(EToken& token, string& tokval)
   while (_in->good()) {
     char c = _in->peek();
 
-    if (!IsAsciiChar(c))
+    if (c == EOF)
+      break;
+    else if (!IsAsciiChar(c))
       token = tUndefined;
     else if (c == '\\')
       faced_escape ^= true;
@@ -593,7 +595,7 @@ void CScanner::ScanString(EToken& token, string& tokval)
       }
     }
     else if (c == '\"') {
-      GetChar();
+      tokval += GetChar();
       break;
     }
 
