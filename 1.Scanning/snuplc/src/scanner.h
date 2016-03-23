@@ -319,6 +319,19 @@ class CScanner {
     /// @retval true characters are comment
     /// @retval false characters are not comment
     bool IsComment(char c);
+
+    /// @brief scan istream until meet character '\"'
+    ///
+    /// @param token token type reference
+    /// @param tokval token attribute reference
+    void ScanString(EToken& token, string& tokval);
+    
+    /// @brief check if a character is printable ASCII character
+    ///
+    /// @param c character
+    /// @retval true character is a printable ASCII character
+    /// @retval false character is not a printable ASCII character
+    bool IsAsciiChar(char c);
     
     /// @brief check if a character is a letter
     ///

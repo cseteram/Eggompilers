@@ -445,42 +445,13 @@ CToken* CScanner::Scan()
       break;
 
     case '\"':
-      token = tString;
-      {
-        bool faced_escape = false;
-        while (_in->good()) {
-          char nc = _in->peek();
-          if (nc < 32 || nc >= 128) // if nc is not ASCIIChar
-            token = tUndefined;
-          else if (nc == '\\') {
-            faced_escape ^= true;
-          }
-          else if (faced_escape) {
-            faced_escape = false;
-            switch (nc) {
-              case 'n':
-              case 't':
-              case '\"':
-              case '\'':
-              case '0':
-                break;
-              default:
-                token = tUndefined;
-                break;
-            }
-          }
-          else if (nc == '\"') {
-            tokval += GetChar();
-            break;
-          }
-          
-          tokval += GetChar();       
-        }
-      }
+      ScanString(token, tokval);
+
       if (tokval.back() != '\"')
         token = tUndefined;
+
       if (token == tString)
-        tokval = tokval.substr(1, (int)tokval.size() - 2);
+        tokval = tokval.substr(1, (int) tokval.size() - 1);
       break;
 
     case '[':
@@ -593,6 +564,46 @@ bool CScanner::IsComment(char c)
   }
 
   return retval;
+}
+
+void CScanner::ScanString(EToken& token, string& tokval)
+{
+  token = tString;
+
+  bool faced_escape = false;
+  while (_in->good()) {
+    char c = _in->peek();
+
+    if (!IsAsciiChar(c))
+      token = tUndefined;
+    else if (c == '\\')
+      faced_escape ^= true;
+    else if (faced_escape) {
+      faced_escape = false;
+      switch (c) {
+        case 'n':
+        case 't':
+        case '\"':
+        case '\'':
+        case '0':
+          break;
+        default:
+          token = tUndefined;
+          break;
+      }
+    }
+    else if (c == '\"') {
+      GetChar();
+      break;
+    }
+
+    tokval += GetChar();
+  }
+}
+
+bool CScanner::IsAsciiChar(char c)
+{
+  return ' ' <= c && c <= '~';
 }
 
 bool CScanner::IsLetter(char c) 
