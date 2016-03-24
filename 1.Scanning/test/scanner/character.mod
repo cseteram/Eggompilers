@@ -17,4 +17,3 @@ begin
   c := test('0');
   WriteLn("Hello, world!\n")
 end character.
-
