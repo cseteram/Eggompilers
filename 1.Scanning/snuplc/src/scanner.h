@@ -320,12 +320,23 @@ class CScanner {
     /// @retval false characters are not comment
     bool IsComment(char c);
 
-    /// @brief scan istream until meet character '\"'
+    /// @brief scan istream until meet character '\'' and make char token
+    ///
+    /// @param token token type reference
+    /// @param tokval token attribute reference
+    void ScanChar(EToken& token, string& tokval);
+
+    /// @brief scan istream until meet character '\"' and make string token
     ///
     /// @param token token type reference
     /// @param tokval token attribute reference
     void ScanString(EToken& token, string& tokval);
     
+    /// @brief trim quotation mark from string
+    ///
+    /// @param tokval string with quotation mark
+    void TrimQuotation(string &tokval);
+
     /// @brief check if a character is printable ASCII character
     ///
     /// @param c character

@@ -409,68 +409,17 @@ CToken* CScanner::Scan()
       break;
 
     case '\'':
-      {
-        bool faced_escape = false;
-        bool filled = false;
-        
-        while (_in->good()) {
-          char nc = _in->peek();
-          if (!filled && !faced_escape && nc == '\'') {
-            tokval += GetChar();
-            break;
-          }
-          else if (filled) {
-            if (nc == '\'') {
-              token = tChar;
-              tokval += GetChar();
-            }
-            break;
-          }
-          else if (nc < 32 || nc >= 128) {
-            tokval += GetChar();
-            break;
-          }
-          else if (nc == '\\' && !faced_escape) {
-            faced_escape = true;
-            tokval += GetChar();
-          }
-          else if (faced_escape) {
-            bool valid = true;
-            switch (nc) {
-              case 'n':
-              case 't':
-              case '\"':
-              case '\'':
-              case '\\':
-              case '0':
-                faced_escape = false;
-                filled = true;
-                tokval += GetChar();
-                break;
-              default:
-                valid = false;
-                break; 
-            }
-            
-            if (!valid) 
-              break;
-          }
-          else {
-            tokval += GetChar();
-            filled = true;
-          }
-        }
-      }
+      ScanChar(token, tokval);
+
+      if (token == tChar)
+        TrimQuotation(tokval);
       break;
 
     case '\"':
       ScanString(token, tokval);
 
-      if (tokval.back() != '\"')
-        token = tUndefined;
-
       if (token == tString)
-        tokval = tokval.substr(1, (int) tokval.size() - 2);
+        TrimQuotation(tokval);
       break;
 
     case '[':
@@ -490,7 +439,7 @@ CToken* CScanner::Scan()
       break;
 
     default:
-      // number
+      /* number */
       if (IsDigit(c)) {
         token = tNumber;
         while (_in->good()) {
@@ -501,7 +450,7 @@ CToken* CScanner::Scan()
         }
       }
 
-      // identifier or keywords
+      /* identifier or keywords */
       else if (IsLetter(c)) {
         token = tIdent;
         while (_in->good()) {
@@ -520,11 +469,8 @@ CToken* CScanner::Scan()
         }
       }
 
-      else {
-        tokval = "invalid character '";
+      else
         tokval += c;
-        tokval += "'";
-      }
       break;
   }
 
@@ -585,7 +531,63 @@ bool CScanner::IsComment(char c)
   return retval;
 }
 
-void CScanner::ScanString(EToken& token, string& tokval)
+void CScanner::ScanChar(EToken &token, string &tokval)
+{
+  bool faced_escape = false;
+  bool waiting_quot = false;
+
+  while (_in->good()) {
+    char c = _in->peek();
+
+    if (c == EOF) break;
+    else if (waiting_quot) {
+      if (c == '\'') {
+        token = tChar;
+        tokval += GetChar();
+      }
+      break;
+    }
+    else if (!IsAsciiChar(c)) {
+      tokval += GetChar();
+      break;
+    }
+    else if (c == '\\' && !faced_escape) {
+      faced_escape = true;
+      tokval += GetChar();
+    }
+    else if (faced_escape) {
+      bool valid = true;
+      switch (c) {
+        case '\"':
+        case '\'':
+          tokval.pop_back();
+        case '\\':
+        case 'n':
+        case 't':
+        case '0':
+          faced_escape = false;
+          waiting_quot = true;
+          tokval += GetChar();
+          break;
+        default:
+          valid = false;
+          break; 
+      }
+
+      if (!valid) break;
+    }
+    else if (c == '\'') {
+      tokval += GetChar();
+      break;
+    }
+    else {
+      tokval += GetChar();
+      waiting_quot = true;
+    }
+  }
+}
+
+void CScanner::ScanString(EToken &token, string &tokval)
 {
   token = tString;
 
@@ -593,8 +595,10 @@ void CScanner::ScanString(EToken& token, string& tokval)
   while (_in->good()) {
     char c = _in->peek();
 
-    if (c == EOF)
+    if (c == EOF) {
+      token = tUndefined;
       break;
+    }
     else if (!IsAsciiChar(c))
       token = tUndefined;
     else if (c == '\\')
@@ -602,10 +606,11 @@ void CScanner::ScanString(EToken& token, string& tokval)
     else if (faced_escape) {
       faced_escape = false;
       switch (c) {
-        case 'n':
-        case 't':
         case '\"':
         case '\'':
+          tokval.pop_back();
+        case 'n':
+        case 't':
         case '0':
           break;
         default:
@@ -620,6 +625,14 @@ void CScanner::ScanString(EToken& token, string& tokval)
 
     tokval += GetChar();
   }
+
+  if (tokval.back() != '\"')
+    token = tUndefined;
+}
+
+void CScanner::TrimQuotation(string &tokval)
+{
+  tokval = tokval.substr(1, (int) tokval.size() - 2);
 }
 
 bool CScanner::IsAsciiChar(char c)
