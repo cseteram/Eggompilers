@@ -69,6 +69,8 @@ _____t
 2147483648
 000000000000000000
 999999999999999999
+-100
++400
 
 // boolean
 true
@@ -78,8 +80,13 @@ false
 'a'
 '\n'
 '\t'
+'\0'
+'\\'
 
 // strings
 "hello, world!"
 "this\tis\ta\ttab!"
-"a"
+"'a\'"
+""
+"\"before_newline\nafter_newline\""
+"before_null\0after_null\n"

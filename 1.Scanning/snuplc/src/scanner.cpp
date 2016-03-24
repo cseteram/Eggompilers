@@ -453,6 +453,7 @@ CToken* CScanner::Scan()
       /* identifier or keywords */
       else if (IsLetter(c)) {
         token = tIdent;
+
         while (_in->good()) {
           char nc = _in->peek();
           if (!IsLetter(nc) && !IsDigit(nc))
@@ -461,12 +462,10 @@ CToken* CScanner::Scan()
         }
         
         auto iter = keywords.find(tokval);
-        if (iter != keywords.end()) {
+        if (iter != keywords.end())
           token = iter->second;
-        }
-        else {
+        else
           keywords[tokval] = token;
-        }
       }
 
       break;
@@ -554,21 +553,37 @@ void CScanner::ScanChar(EToken &token, string &tokval)
       tokval += GetChar();
     }
     else if (faced_escape) {
+      faced_escape = false;
+      waiting_quot = true;
+      tokval.pop_back();
+
       bool valid = true;
       switch (c) {
         case '\"':
         case '\'':
-          tokval.pop_back();
         case '\\':
-        case 'n':
-        case 't':
-        case '0':
-          faced_escape = false;
-          waiting_quot = true;
           tokval += GetChar();
           break;
+
+        case 'n':
+          tokval += '\n';
+          GetChar();
+          break;
+
+        case 't':
+          tokval += '\t';
+          GetChar();
+          break;
+
+        case '0':
+          tokval += '\0';
+          GetChar();
+          break;
+
         default:
           valid = false;
+          tokval += '\\';
+          tokval += GetChar();
           break; 
       }
 
@@ -597,22 +612,46 @@ void CScanner::ScanString(EToken &token, string &tokval)
       token = tUndefined;
       break;
     }
-    else if (!IsAsciiChar(c))
+    else if (!IsAsciiChar(c)) {
       token = tUndefined;
-    else if (c == '\\')
+      tokval += GetChar();
+    }
+    else if (c == '\\') {
       faced_escape ^= true;
+      GetChar();
+
+      if (faced_escape)
+        tokval += c;
+    }
     else if (faced_escape) {
       faced_escape = false;
+      tokval.pop_back();
+
       switch (c) {
         case '\"':
         case '\'':
-          tokval.pop_back();
-        case 'n':
-        case 't':
-        case '0':
+          tokval += GetChar();
           break;
+
+        case 'n':
+          tokval += '\n';
+          GetChar();
+          break;
+
+        case 't':
+          tokval += '\t';
+          GetChar();
+          break;
+
+        case '0':
+          tokval += '\0';
+          GetChar();
+          break;
+
         default:
           token = tUndefined;
+          tokval += '\\';
+          tokval += GetChar();
           break;
       }
     }
@@ -620,8 +659,8 @@ void CScanner::ScanString(EToken &token, string &tokval)
       tokval += GetChar();
       break;
     }
-
-    tokval += GetChar();
+    else
+      tokval += GetChar();
   }
 
   if (tokval.back() != '\"')
