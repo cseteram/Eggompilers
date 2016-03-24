@@ -469,8 +469,6 @@ CToken* CScanner::Scan()
         }
       }
 
-      else
-        tokval += c;
       break;
   }
 
