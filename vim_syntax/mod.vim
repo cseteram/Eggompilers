@@ -14,8 +14,11 @@ syn keyword snuType         integer boolean char
 syn keyword snuBool         true false
 syn keyword snuTODO         TODO FIXME NOTE contained
 
+syn match   snuParen        ")\|("
+syn match   snuBrak         "\]\|\["
 syn match   snuParenError   ")"
 syn match   snuBrakError    "\]"
+
 syn match   snuNumber       "[-+]\?\d\+"
 syn match   snuString       "\".*\"" contains=snuEscape
 syn match   snuCharacter    "\('\p'\|'\\\p'\)" contains=snuEscape
@@ -25,8 +28,8 @@ syn match   snuOperator     "&&\|||"
 syn match   snuOperator     "[+=*/!<>=#,.;:]"
 syn match   snuComment      "//.*$" contains=snuTODO
 
-syn region  snuParen start="(" end=")" fold transparent contains=snuPreProc,snuKeyword,snuCond,snuLoop,snuType,snuBool,snuComment,snuBrakError,snuNumber,snuString,snuCharacter,snuOperator,snuParen,SnuBrak
-syn region  snuBrak start="\[" end="\]" fold transparent contains=snuPreProc,snuKeyword,snuCond,snuLoop,snuType,snuBool,snuComment,snuParenError,snuNumber,snuString,snuCharacter,snuOperator,snuParen,SnuBrak
+syn region  snuParenPair start="(" end=")" fold transparent contains=snuPreProc,snuKeyword,snuCond,snuLoop,snuType,snuBool,snuComment,snuBrakError,snuNumber,snuString,snuCharacter,snuOperator,snuParen,SnuBrak,snuParenPair,snuBrakPair
+syn region  snuBrakPair start="\[" end="\]" fold transparent contains=snuPreProc,snuKeyword,snuCond,snuLoop,snuType,snuBool,snuComment,snuParenError,snuNumber,snuString,snuCharacter,snuOperator,snuParen,SnuBrak,snuParenPair,snuBrakPair
 
 
 hi link snuDeclare      Macro
@@ -38,8 +41,11 @@ hi link snuType         Type
 hi link snuBool         Boolean
 hi link snuTODO         Todo
 
+hi link snuParen        Keyword
+hi link snuBrak         Keyword
 hi link snuParenError   Error
 hi link snuBrakError    Error
+
 hi link snuComment      Comment
 hi link snuNumber       String
 hi link snuString       String
