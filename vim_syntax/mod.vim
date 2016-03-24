@@ -14,18 +14,17 @@ syn keyword snuType         integer boolean char
 syn keyword snuBool         true false
 syn keyword snuTodo         TODO FIXME NOTE contained
 
-syn match   snuComment      "//.*$" contains=snuTodo
-
 syn match   snuParenError   ")"
 syn match   snuBrakError    "\]"
 
-syn match   snuNumber       "\<\d\+\>"
+syn match   snuNumber       "\<\d\+"
 syn match   snuString       "\".*\"" contains=snuEscape
 syn match   snuCharacter    "\('.'\|'\\.'\)" contains=snuEscape
 syn match   snuEscape       "\\." contained
 syn match   snuOperator     "\(:\|<\|>\)="
 syn match   snuOperator     "&&\|||"
 syn match   snuOperator     "[+\-=*/!<>=#.;]"
+syn match   snuComment      "//.*$" contains=snuTodo
 
 syn cluster snuContained    contains=snuEscape,snuTodo
 
@@ -42,8 +41,6 @@ hi link snuType         Type
 hi link snuBool         Boolean
 hi link snuTodo         Todo
 
-hi link snuComment      Comment
-
 hi link snuParenError   Error
 hi link snuBrakError    Error
 
@@ -52,6 +49,7 @@ hi link snuString       String
 hi link snuCharacter    String
 hi link snuEscape       Delimiter
 hi link snuOperator     Keyword
+hi link snuComment      Comment
 
 hi link snuBrace        Keyword
 

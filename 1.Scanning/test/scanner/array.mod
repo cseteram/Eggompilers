@@ -15,8 +15,6 @@ procedure print_array(array: integer[]);
 begin
 end print_array;
 
-temp1
-
 begin
   i := A[0];
   b := B[5];
