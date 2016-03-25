@@ -342,21 +342,21 @@ class CScanner {
     /// @param c character
     /// @retval true character is a printable ASCII character
     /// @retval false character is not a printable ASCII character
-    bool IsAsciiChar(char c);
+    bool IsAsciiChar(char c) const;
     
     /// @brief check if a character is a letter
     ///
     /// @param c character
     /// @retval true character is a letter
     /// @retval false character is not a digit
-    bool IsLetter(char c);
+    bool IsLetter(char c) const;
     
     /// @brief check if a character is a digit
     ///
     /// @param c character
     /// @retval true character is a digit
     /// @retval false character is not a digit
-    bool IsDigit(char c);
+    bool IsDigit(char c) const;
 
     /// @}
 

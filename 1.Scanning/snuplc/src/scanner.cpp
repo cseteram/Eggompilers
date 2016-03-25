@@ -672,12 +672,12 @@ void CScanner::TrimQuotation(string &tokval)
   tokval = tokval.substr(1, (int) tokval.size() - 2);
 }
 
-bool CScanner::IsAsciiChar(char c)
+bool CScanner::IsAsciiChar(char c) const
 {
   return ' ' <= c && c <= '~';
 }
 
-bool CScanner::IsLetter(char c) 
+bool CScanner::IsLetter(char c) const
 {
   if ('A' <= c && c <= 'Z')
     return true;
@@ -687,7 +687,7 @@ bool CScanner::IsLetter(char c)
   return c == '_';
 }
 
-bool CScanner::IsDigit(char c)
+bool CScanner::IsDigit(char c) const
 {
   return '0' <= c && c <= '9';   
 }
