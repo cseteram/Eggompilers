@@ -1,7 +1,7 @@
 # Eggompilers
 ![](https://github.com/cseteram/Eggompilers/blob/images/images/KakaoTalk_20160107_214203206.png)
 
-SNUPL/1 Compilers  
+## We are sufferd by SNUPL/1 Compilers!!!
 > Worked by [cseteram](https://github.com/cseteram), [kalaluthien](https://github.com/kalaluthien) in Compilers(4190.409-001, 2016 spring) of SNU.
 
 ![](http://www.snu.ac.kr/webdata/boards/enmedia/65da03fbe822bf23d07dbf313349e4cd.jpg)
