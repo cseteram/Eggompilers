@@ -159,8 +159,12 @@ CAstModule* CParser::module(void)
         //
 
         tt = _scanner->Peek().GetType();
-        if (tt == tColon) break;
+        if (tt == tColon) {
+          Consume(tColon);
+          break;
+        }
         if (tt != tComma) /* ERROR */;
+        Consume(tComma);
       }
 
       ttype = type();
