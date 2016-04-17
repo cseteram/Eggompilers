@@ -130,16 +130,13 @@ CAstModule* CParser::module(void)
   // varDeclaration ::= [ "var" varDeclSequence ";" ].
   // varDeclSequence ::= varDecl { ";" varDecl }.
   // varDecl ::= ident { "," ident } ":" type.
+  // subroutineDecl ::= (procedureDecl | functionDecl) subroutineBody ident ";".
   //
   CToken t;
   CAstModule *m = new CAstModule(t, "module");
-  CAstDesignator *id = NULL;
-  CAstType *var = NULL;
-  CAstProcedure *subs = NULL;
-  CAstStatement *statseq = NULL;
 
   Consume(kModule);
-  id = ident();
+  CAstDesignator *id = ident();
   Consume(tSemicolon);
 
   EToken tt = _scanner->Peek().GetType();
@@ -148,48 +145,64 @@ CAstModule* CParser::module(void)
 
     do {
       CAstType ttype;
-      // list l;
+      vector<const string> l;
 
       while (true) {
         CToken e = _scanner->Get();
-        if (e.GetType() != tIdent) /* ERROR */;
+        if (e.GetType() != tIdent)
+          SetError(e, "invalid identifier");
 
-        //
-        // list l << e.GetValue();
-        //
+        l.push_back(e.GetValue());
 
-        tt = _scanner->Peek().GetType();
-        if (tt == tColon) {
+        e = _scanner->Peek();
+        if (e.GetType() == tColon) {
           Consume(tColon);
           break;
         }
-        if (tt != tComma) /* ERROR */;
+        else if (e.GetType() != tComma)
+          SetError(e, "',' expected")
+
         Consume(tComma);
       }
 
       ttype = type();
 
-      //
-      // for e in list l
-      //   m->CreateVar(e, ttype);
-      //
+      for (string &e : l)
+        m->CreateVar(e, ttype);
       
       Consume(tSemicolon);
-    } while (/* FOLLOW(this) == FIRST(subroutineDecl) || kBegin */)
+      tt = _scanner->Peek().GetType();
+    } while (tt != kProc && tt != kFunc && tt != kBegin)
   }
 
+  CAstProcedure *sub = NULL;
   tt = _scanner->Peek().GetType();
   while (tt != kBegin) {
-    //
-    // subs = subroutineDecl(m) ...?
-    //
+    switch (tt) {
+      case kProc:
+        // sub = procedure(m);
+        break;
+
+      case kFunc:
+        // sub = function(m);
+        break;
+        
+      default:
+        SetError(_scanner->Peek(), "invalid subroutine declaration");
+        break;
+    }
+
     tt = _scanner->Peek().GetType();
   }
 
   Consume(kBegin);
-  statseq = statSequence(m);
+  CAstStatement *statseq = statSequence(m);
   Consume(kEnd);
-  if (id->GetSymbol() != ident()->GetSymbol()) /* ERROR */;
+
+  CToken tid = _scanner->Peek();
+  CAstDesignator *id_close = ident();
+  if (id->GetSymbol() != id_close->GetSymbol())
+    SetError(tid, "module name unmatched");
   Consume(tDot);
 
   m->SetStatementSequence(statseq);
@@ -228,15 +241,15 @@ CAstStatement* CParser::statSequence(CAstScope *s)
         break;
 
       case kIf:
-        st = /* ifStatement(s) */;
+        // st = ifStatement(s);
         break;
 
       case kWhile:
-        st = /* whileStatement(s) */;
+        // st = whileStatement(s);
         break;
 
       case kReturn:
-        st = /* returnStatement(s) */;
+        // st = returnStatement(s);
         break;
 
       default:
@@ -257,7 +270,6 @@ CAstStatement* CParser::statSequence(CAstScope *s)
     Consume(tSemicolon);
   } while (!_abort);
   
-
   return head;
 }
 
@@ -270,8 +282,10 @@ CAstStatAssign* CParser::assignment(CAstScope *s)
   // assignment ::= qualident ":=" expression.
   //
   CToken t;
-
-  CAstConstant *lhs = number();
+  CAstConstant *lhs = NULL;
+  
+  lhs = number();
+  // lhs = qualident();
   Consume(tAssign, &t);
 
   CAstExpression *rhs = expression(s);
@@ -429,6 +443,8 @@ CAstDesignator* CParser::ident(void)
   CToken t;
 
   Consume(tIdent, &t);
+
+  // TODO: using symtab
 
   return new CAstDesignator(t, /* Symbol */);
 }
