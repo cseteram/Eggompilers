@@ -135,10 +135,12 @@ CAstModule* CParser::module(void)
   CToken t;
   CAstModule *m = new CAstModule(t, "module");
 
+  // "module" ident ";"
   Consume(kModule);
   CAstDesignator *id = ident();
   Consume(tSemicolon);
 
+  // varDeclaration
   EToken tt = _scanner->Peek().GetType();
   if (tt == kVar) {
     Consume(kVar);
@@ -175,6 +177,7 @@ CAstModule* CParser::module(void)
     } while (tt != kProc && tt != kFunc && tt != kBegin)
   }
 
+  // { subroutineDecl }
   CAstProcedure *sub = NULL;
   tt = _scanner->Peek().GetType();
   while (tt != kBegin) {
@@ -195,10 +198,12 @@ CAstModule* CParser::module(void)
     tt = _scanner->Peek().GetType();
   }
 
+  // "begin" statSequence "end"
   Consume(kBegin);
   CAstStatement *statseq = statSequence(m);
   Consume(kEnd);
 
+  // ident "."
   CToken tid = _scanner->Peek();
   CAstDesignator *id_close = ident();
   if (id->GetSymbol() != id_close->GetSymbol())
