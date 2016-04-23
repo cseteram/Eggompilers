@@ -1,12 +1,11 @@
 //------------------------------------------------------------------------------
-/// @brief SnuPL/0 scanner
+/// @brief SnuPL/1 scanner
 /// @author Bernhard Egger <bernhard@csap.snu.ac.kr>
 /// @section changelog Change Log
 /// 2012/09/14 Bernhard Egger created
 /// 2013/03/07 Bernhard Egger adapted to SnuPL/0
-/// 2016/03/11 Bernhard Egger adapted to SnuPL/1
-/// 2016/03/13 Bernhard Egger assignment 1: scans SnuPL/-1
-
+/// 2014/09/10 Bernhard Egger assignment 1: scans SnuPL/-1
+/// 2016/03/13 Bernhard Egger assignment 1: adapted to modified SnuPL/-1 syntax
 ///
 /// @section license_section License
 /// Copyright (c) 2012-2016, Bernhard Egger
@@ -34,8 +33,8 @@
 /// DAMAGE.
 //------------------------------------------------------------------------------
 
-#ifndef __SnuPL_SCANNER_H__
-#define __SnuPL_SCANNER_H__
+#ifndef __SnuPL1_SCANNER_H__
+#define __SnuPL1_SCANNER_H__
 
 #include <istream>
 #include <ostream>
@@ -45,20 +44,44 @@
 using namespace std;
 
 //------------------------------------------------------------------------------
-/// @brief SnuPL/0 token type
+/// @brief SnuPL/1 token type
 ///
-/// each member of this enumeration represents a token in SnuPL/0
+/// each member of this enumeration represents a token in SnuPL/1
 ///
 enum EToken {
-  tNumber,                          ///< number
+  kModule = 0,                      ///< module
+  kBegin,                           ///< begin
+  kEnd,                             ///< end
+  kType,                            ///< boolean or char or integer
+  kBool,                            ///< true or false
+  kIf,                              ///< if
+  kThen,                            ///< then
+  kElse,                            ///< else
+  kWhile,                           ///< while
+  kDo,                              ///< do
+  kReturn,                          ///< return
+  kVar,                             ///< var
+  kProc,                            ///< procedure
+  kFunc,                            ///< function
+
+  tIdent,                           ///< an identifier
+  tNumber,                          ///< a number
+  tChar,                            ///< a character
+  tString,                          ///< a string
   tPlusMinus,                       ///< '+' or '-'
   tMulDiv,                          ///< '*' or '/'
+  tAndOr,                           ///< '&&' or '||'
+  tNot,                             ///< a not operator
   tRelOp,                           ///< relational operator
   tAssign,                          ///< assignment operator
   tSemicolon,                       ///< a semicolon
+  tColon,                           ///< a colon
+  tComma,                           ///< a comma
   tDot,                             ///< a dot
-  tLParens,                         ///< a left parenthesis
-  tRParens,                         ///< a right parenthesis
+  tLBrak,                           ///< a left bracket
+  tRBrak,                           ///< a right bracket
+  tLParen,                          ///< a left paren
+  tRParen,                          ///< a right paren
 
   tEOF,                             ///< end of file
   tIOError,                         ///< I/O error
@@ -140,21 +163,6 @@ class CToken {
 
     /// @}
 
-    /// @name string escape/unescaping (static methods)
-    /// @{
-
-    /// @brief escape special characters in a string
-    ///
-    /// @param text string
-    /// @retval escaped string
-    static string escape(const string text);
-
-    /// @brief unescape special characters in a string
-    ///
-    /// @param text escapted string
-    /// @retval unescaped string
-    static string unescape(const string text);
-    /// @}
 
     /// @brief print the token to an output stream
     ///
@@ -166,6 +174,13 @@ class CToken {
     string _value;                  ///< token value
     int    _line;                   ///< input stream position (line)
     int    _char;                   ///< input stream position (character pos)
+
+
+    /// @brief escape special characters in a string
+    ///
+    /// @param text string
+    /// @retval escaped string
+    string escape(const string text);
 };
 
 /// @name CToken output operators
@@ -191,7 +206,7 @@ ostream& operator<<(ostream &out, const CToken *t);
 //------------------------------------------------------------------------------
 /// @brief scanner
 ///
-/// used by CParser to scan (tokenize) SnuPL/0 code
+/// used by CParser to scan (tokenize) SnuPL/1 code
 ///
 class CScanner {
   public:
@@ -247,7 +262,7 @@ class CScanner {
     void NextToken(void);
 
     /// @brief store the current position of the input stream internally
-    void RecordStreamPosition(void);
+    void RecordStreamPosition();
 
     /// @brief return the previously recorded input stream position
     ///
@@ -282,6 +297,15 @@ class CScanner {
     /// @retval string containing the characters read
     string GetChar(int n);
 
+    /// @brief check whether a character is a white character or comment
+    ///
+    /// @retval true character is white space or comment
+    /// @retval false character is not white space or comment
+    bool OnRemove(void);
+
+    /// @brief delete one line from the input stream
+    void DeleteLine(void);
+
     /// @brief check if a character is a white character
     ///
     /// @param c character
@@ -289,26 +313,50 @@ class CScanner {
     /// @retval false character is not white space
     bool IsWhite(char c) const;
 
-    /// @brief check if a character is an alphabetic character (a-z, A-Z)
+    /// @brief check if two characters are representing comment line
     ///
     /// @param c character
-    /// @retval true character is alphabetic
-    /// @retval false character is not alphabetic
-    bool IsAlpha(char c) const;
+    /// @retval true characters are comment
+    /// @retval false characters are not comment
+    bool IsComment(char c);
 
-    /// @brief check if a character is an numeric character (0-9)
+    /// @brief scan istream until meet character '\'' and make char token
     ///
-    /// @param c character
-    /// @retval true character is numeric
-    /// @retval false character is not numeric
-    bool IsNum(char c) const;
+    /// @param token token type reference
+    /// @param tokval token attribute reference
+    void ScanChar(EToken& token, string& tokval);
 
-    /// @brief check if a character is a valid ID character
+    /// @brief scan istream until meet character '\"' and make string token
+    ///
+    /// @param token token type reference
+    /// @param tokval token attribute reference
+    void ScanString(EToken& token, string& tokval);
+    
+    /// @brief trim quotation mark from string
+    ///
+    /// @param tokval string with quotation mark
+    void TrimQuotation(string &tokval);
+
+    /// @brief check if a character is printable ASCII character
     ///
     /// @param c character
-    /// @retval true character is valid as an ID character
-    /// @retval false character is not valid in an ID
-    bool IsIDChar(char c) const;
+    /// @retval true character is a printable ASCII character
+    /// @retval false character is not a printable ASCII character
+    bool IsAsciiChar(char c) const;
+    
+    /// @brief check if a character is a letter
+    ///
+    /// @param c character
+    /// @retval true character is a letter
+    /// @retval false character is not a digit
+    bool IsLetter(char c) const;
+    
+    /// @brief check if a character is a digit
+    ///
+    /// @param c character
+    /// @retval true character is a digit
+    /// @retval false character is not a digit
+    bool IsDigit(char c) const;
 
     /// @}
 
@@ -326,4 +374,4 @@ class CScanner {
 };
 
 
-#endif // __SnuPL_SCANNER_H__
+#endif // __SnuPL0_SCANNER_H__
