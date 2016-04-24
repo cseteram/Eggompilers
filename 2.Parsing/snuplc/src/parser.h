@@ -96,6 +96,8 @@ class CParser {
     /// @{
 
     CAstModule*           module(void);
+    CAstProcedure*        procedureDecl(CAstScope *s);
+    CAstProcedure*        functionDecl(CAstScope *s);
 
     CAstStatement*        statSequence(CAstScope *s);
 
@@ -108,11 +110,11 @@ class CParser {
 
     CAstType*             type(void);
 
-    CAstDesignator*       ident(void);
+    CAstDesignator*       ident(CAstScope *s, EScope scope);
     CAstConstant*         number(void);
     CAstConstant*         boolean(void);
     CAstConstant*         character(void);
-    CAstStringConstant*   string(CAstScope *s);
+    CAstStringConstant*   stringConst(CAstScope *s);
 
     /// @}
 
