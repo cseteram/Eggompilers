@@ -96,8 +96,13 @@ class CParser {
     /// @{
 
     CAstModule*           module(void);
+    void                  varDeclaration(CAstScope *s);
+    vector<string>        varDecl(CAstType *ttype);
+
     CAstProcedure*        procedureDecl(CAstScope *s);
     CAstProcedure*        functionDecl(CAstScope *s);
+    CSymProc*             formalParam(const string &name);
+    void                  subroutineBody(CAstScope *s);
 
     CAstStatement*        statSequence(CAstScope *s);
 

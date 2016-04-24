@@ -129,9 +129,6 @@ CAstModule* CParser::module(void)
   // varDecl ::= ident { "," ident } ":" type.
   // subroutineDecl ::= (procedureDecl | functionDecl) subroutineBody ident ";".
   //
-  CToken t;
-  CAstModule *m = new CAstModule(t, "");
-  CSymtab *symtab = m->GetSymbolTable();
 
   // module -> "module" ident ";" ...
   Consume(kModule);
@@ -140,51 +137,16 @@ CAstModule* CParser::module(void)
     SetError(tModuleIdent, "module identifier expected");
   Consume(tSemicolon);
 
+  CToken dummy;
+  CAstModule *m = new CAstModule(dummy, tModuleIdent.GetName());
+  CSymtab *symtab = m->GetSymbolTable();
+
   // module -> ... varDeclaration ...
-  // varDeclaration -> "var" ...
-  EToken tt = _scanner->Peek().GetType();
-  if (tt == kVar) {
-    Consume(kVar);
-
-    // varDeclaration -> ... varDeclSequence ...
-    do {
-      CAstType *ttype;
-      vector<const string> l;
-
-      // varDeclSequence -> ... varDecl ...
-      while (!_abort) {
-        CToken e = _scanner->Get();
-        if (e.GetType() != tIdent)
-          SetError(e, "invalid identifier");
-
-        l.push_back(e.GetValue());
-
-        e = _scanner->Peek();
-        if (e.GetType() == tColon) break;
-        else if (e.GetType() != tComma)
-          SetError(e, "',' expected");
-
-        // varDecl -> ... "," ...
-        Consume(tComma);
-      }
-
-      // varDecl -> ... ":" type
-      Consume(tColon);
-      ttype = type();
-      for (string &str : l) {
-        CSymbol *global_var = m->CreateVar(str, ttype);
-        m->GetSymbolTable()->AddSymbol(global_var);
-      }
-      
-      // varDeclSequence -> ... ";" ...
-      Consume(tSemicolon);
-      tt = _scanner->Peek().GetType();
-    } while (tt != kProc && tt != kFunc && tt != kBegin)
-  }
+  varDeclaration(m);
 
   // module -> ... { subroutineDecl } ...
   CAstProcedure *sub = NULL;
-  tt = _scanner->Peek().GetType();
+  Etoken tt = _scanner->Peek().GetType();
   while (tt != kBegin) {
     switch (tt) {
       // subroutineDecl -> procedureDecl ...
@@ -203,17 +165,20 @@ CAstModule* CParser::module(void)
     }
 
     // subroutineDecl -> ... subroutineBody ident ";"
-    subroutineBody(sub); // FIXME
-    ident(m); // FIXME
-    Consume(tSemicolon);
+    subroutineBody(sub); // TODO
 
-    tt = _scanner->Peek().GetType();
+    CToken t = _scanner->Peek();
+    if (t.GetType() != tIdent || t.GetName() != sub->GetName())
+      SetError(t, "module identifier not matched");
+    Consume(tIdent);
+    Consume(tSemicolon);
   }
 
   // module -> ... "begin" statSequence "end" ...
   Consume(kBegin);
   CAstStatement *statseq = statSequence(m);
   Consume(kEnd);
+  m->SetStatementSequence(statseq);
 
   // module -> ... ident "."
   CToken tModuleIdentClose = _scanner->Get();
@@ -221,9 +186,61 @@ CAstModule* CParser::module(void)
     SetError(tModuleIdentClose, "module identifier not matched");
   Consume(tDot);
 
-  m->SetStatementSequence(statseq);
-
   return m;
+}
+
+void CParser::varDeclaration(CAstScope *s) {
+  Etoken tt;
+
+  // varDeclaration -> "var" ...
+  tt = _scanner->Peek().GetType();
+  if (tt == kVar) {
+    Consume(kVar);
+
+    // varDeclaration -> ... varDeclSequence ...
+    // varDeclSequence -> varDecl { ";" varDecl }.
+    do {
+      CAstType *ttype;
+      vector<string> l = varDecl(ttype);
+
+      for (const auto &str : l) {
+        CSymbol *global_var = s->CreateVar(str, ttype->GetType());
+        s->GetSymbolTable()->AddSymbol(global_var);
+      }
+      
+      Consume(tSemicolon);
+      tt = _scanner->Peek().GetType();
+    } while (tt != kProc && tt != kFunc && tt != kBegin);
+  }
+
+  return;
+}
+
+vector<string> CParser::varDecl(CAstType *ttype)
+{
+  vector<string> l;
+
+  // varDecl -> ident { "," ident } ":" type.
+  
+  while (!_abort) {
+    CToken e = _scanner->Get();
+    if (e.GetType() != tIdent)
+      SetError(e, "invalid identifier");
+    
+    l.push_back(e.GetValue());
+    
+    e = _scanner->Peek();
+    if (e.GetType() == tColon) break;
+    else if (e.GetType() != tComma)
+      SetError(e, "',' expected");
+
+    Consume(tComma);
+  }
+
+  Consume(tColon);
+  ttype = type();
+
+  return l;
 }
 
 CAstProcedure* CParser::procedureDecl(CAstScope *s)
@@ -233,7 +250,17 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
   // formalParam ::= "(" [ varDeclSequence ] ")".
   //
 
-  return NULL;
+  CToken t;
+  Consume(kProc, &t);
+  CToken e = _scanner->Get();
+  if (e.GetType() != tIdent)
+    SetError(e, "procedure identifier expected");
+
+  const string &procedureName = e.GetName();
+  CSymProc *symbol = formalParam(procedureName);
+  Consume(tSemicolon);
+
+  return new CAstProcedure(t, procedureName, s, symbol);
 }
 
 CAstProcedure* CParser::functionDecl(CAstScope *s)
@@ -242,11 +269,78 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   // funtionDecl ::= "function" ident [ formalParam ] ":" type ";".
   // formalParam ::= "(" [ varDeclSequence ] ")".
   //
+  
+  CToken t;
+  Consume(kFunc, &t);
+  CToken e = _scanner->Get();
+  if (e.GetType() != tIdent)
+    SetError(e, "function identifier expected");
 
-  return NULL;
+  const string &functionName = e.GetName();
+  CSymProc *symbol = formalParam(functionName);
+  Consume(tSemicolon);
+
+  return new CAstProcedure(t, functionName, s, symbol);
 }
 
-CAstNode* CParser::subroutineBody(CAstScope *s)
+CSymProc* CParser::formalParam(const string &name)
+{
+  CTypeManager *tm = CTypeManager::Get();
+  CAstType *ttype;
+  vector<vector<string> > paramNamesSet;
+  vector<CAstType*> paramTypes;
+
+  CToken e = _scanner->Peek();
+  if (e.GetType() == tLBrak) {
+    Consume(tLBrak);
+
+    e = _scanner->Peek();
+    if (e.GetType() != tRBrak) {
+      do {
+        CAstType *paramType;
+        vector<string> paramNames = varDecl(paramType);
+
+        paramNamesSet.push_back(paramNames);
+        paramTypes.push_back(paramType);
+
+        e = _scanner->Peek();
+        if (e.GetType() == tRBrak)
+          break;
+        else 
+          Consume(tSemicolon);
+      } while (_abort);
+    }
+
+    Consume(tRBrak);
+  }
+
+  e = _scanner->Peek();
+  if (e.GetType() == tColon) {
+    Consume(tColon);
+    ttype = type();
+  }
+  Consume(tSemicolon);
+
+  // All CTypes must be managed by CTypeManager,
+  // since all constructors in CType class are "protected".
+  const CType *return_type = (ttype == NULL ? (tm->GetNull()) : (ttype->GetType()));
+  CSymProc *symbol = new CSymProc(name, return_type);
+
+  // add params to symbol
+  for (int i = 0, j = 0 ; i < (int) paramNamesSet.size() ; i++) {
+    vector<string> &paramNames = paramNamesSet[i];
+    CAstType* paramType = paramTypes[i];
+    
+    for (const auto &str : paramNames) {
+      CSymParam* param = new CSymParam(j++, str, paramType->GetType());
+      symbol->AddParam(param);
+    } 
+  }
+
+  return symbol;
+}
+
+void CParser::subroutineBody(CAstScope *s)
 {
   //
   // subroutineBody ::= varDeclaration "begin" statSequence "end".
@@ -255,7 +349,14 @@ CAstNode* CParser::subroutineBody(CAstScope *s)
   // varDecl ::= ident { "," ident } ":" type.
   //
 
-  return NULL;
+  varDeclaration(s);
+  Consume(kBegin);
+  CAstStatement *statseq = statSequence(s);
+  Consume(kEnd);
+
+  s->SetStatementSequence(statseq);
+
+  return;
 }
 
 CAstStatement* CParser::statSequence(CAstScope *s)
