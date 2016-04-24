@@ -114,7 +114,7 @@ class CParser {
     CAstConstant*         number(void);
     CAstConstant*         boolean(void);
     CAstConstant*         character(void);
-    CAstStringConstant*   string(CAstScope *s);
+    CAstStringConstant*   stringConst(CAstScope *s);
 
     /// @}
 

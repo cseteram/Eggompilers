@@ -135,7 +135,9 @@ CAstModule* CParser::module(void)
 
   // module -> "module" ident ";" ...
   Consume(kModule);
-  CAstDesignator *id = ident(m); // FIXME
+  CToken tModuleIdent = _scanner->Get();
+  if (tModuleIdent.GetType() != tIdent)
+    SetError(tModuleIdent, "module identifier expected");
   Consume(tSemicolon);
 
   // module -> ... varDeclaration ...
@@ -150,7 +152,7 @@ CAstModule* CParser::module(void)
       vector<const string> l;
 
       // varDeclSequence -> ... varDecl ...
-      while (true) {
+      while (!_abort) {
         CToken e = _scanner->Get();
         if (e.GetType() != tIdent)
           SetError(e, "invalid identifier");
@@ -189,6 +191,7 @@ CAstModule* CParser::module(void)
       case kProc:
         sub = procedureDecl(m);
         break;
+
       // subroutineDecl -> functionDecl ...
       case kFunc:
         sub = functionDecl(m);
@@ -201,7 +204,7 @@ CAstModule* CParser::module(void)
 
     // subroutineDecl -> ... subroutineBody ident ";"
     subroutineBody(sub); // FIXME
-    if (sub->GetSymbol() != ident(sub)->GetSymbol()); // FIXME
+    ident(m); // FIXME
     Consume(tSemicolon);
 
     tt = _scanner->Peek().GetType();
@@ -213,9 +216,9 @@ CAstModule* CParser::module(void)
   Consume(kEnd);
 
   // module -> ... ident "."
-  CToken tid = _scanner->Peek();
-  if (id->GetSymbol() != ident(m)->GetSymbol()) // FIXME
-    SetError(tid, "module name unmatched");
+  CToken tModuleIdentClose = _scanner->Get();
+  if (tModuleIdent.GetValue() != tModuleIdentClose.GetValue())
+    SetError(tModuleIdentClose, "module identifier not matched");
   Consume(tDot);
 
   m->SetStatementSequence(statseq);
@@ -279,14 +282,17 @@ CAstStatement* CParser::statSequence(CAstScope *s)
       case tNumber:
         st = assignment(s);
         break;
+
       // statement -> ifStatement
       case kIf:
         st = ifStatement(s);
         break;
+
       // statement -> whileStatement
       case kWhile:
         st = whileStatement(s);
         break;
+
       // statement -> returnStatement
       case kReturn:
         st = returnStatement(s);
@@ -335,8 +341,9 @@ CAstStatCall* CParser::subroutineCall(CAstScope *s)
   //
   // subroutineCall ::= ident "(" [ expression { "," expression } ] ")".
   //
+  CToken t;
 
-  return NULL;
+  return new CAstStatCall(t, new CAstFunctionCall(t, symbol));
 }
 
 CAstStatIf* CParser::ifStatement(CAstScope *s)
@@ -371,40 +378,53 @@ CAstExpression* CParser::expression(CAstScope* s)
 {
   //
   // expression ::= simpleexpr [ relOp simpleexpr ].
+  // relOp ::= "=" | "#" | "<" | "<=" | ">" | ">=".
   //
   CToken t;
   EOperation relop;
   CAstExpression *left = NULL, *right = NULL;
 
+  // expression -> simpleexpr ...
   left = simpleexpr(s);
 
+  // expression -> ... relOp simpleexpr ...
   if (_scanner->Peek().GetType() == tRelOp) {
     Consume(tRelOp, &t);
     right = simpleexpr(s);
 
-    if (t.GetValue() == "=")       relop = opEqual;
-    else if (t.GetValue() == "#")  relop = opNotEqual;
+    if (t.GetValue() == "=") relop = opEqual;
+    else if (t.GetValue() == "#") relop = opNotEqual;
+    else if (t.GetValue() == "<") relop = opLessThan;
+    else if (t.GetValue() == "<=") relop = opLessEqual;
+    else if (t.GetValue() == ">") relop = opBiggerThan;
+    else if (t.GetValue() == ">=") relop = opBiggerEqual;
     else SetError(t, "invalid relation.");
 
     return new CAstBinaryOp(t, relop, left, right);
-  } else {
-    return left;
   }
+  else
+    return left;
 }
 
 CAstExpression* CParser::simpleexpr(CAstScope *s)
 {
   //
   // simpleexpr ::= ["+"|"-"] term { termOp term }.
+  // termOp ::= "+" | "-" | "||".
   //
   CAstExpression *n = NULL;
 
+  // TODO: add unary
+
+  // simpleexpr -> ... term ...
   n = term(s);
 
+  // simpleexpr -> ... termOp term ...
   while (_scanner->Peek().GetType() == tPlusMinus) {
     CToken t;
     CAstExpression *l = n, *r;
 
+    // FIXME
     Consume(tPlusMinus, &t);
 
     r = term(s);
@@ -419,18 +439,20 @@ CAstExpression* CParser::simpleexpr(CAstScope *s)
 CAstExpression* CParser::term(CAstScope *s)
 {
   //
-  // term ::= factor { ("*"|"/"|"&&") factor }.
+  // term ::= factor { factOp factor }.
   //
   CAstExpression *n = NULL;
 
+  // term -> factor ...
   n = factor(s);
 
+  // term -> ... factOp factor ...
   EToken tt = _scanner->Peek().GetType();
-
   while ((tt == tMulDiv)) {
     CToken t;
     CAstExpression *l = n, *r;
 
+    // FIXME
     Consume(tMulDiv, &t);
 
     r = factor(s);
@@ -454,16 +476,43 @@ CAstExpression* CParser::factor(CAstScope *s)
   CAstExpression *unary = NULL, *n = NULL;
 
   switch (tt) {
-    // factor ::= number
+    // factor -> number
     case tNumber:
       n = number();
       break;
 
-    // factor ::= "(" expression ")"
+    // factor -> boolean
+    case kBool:
+      n = boolean();
+      break;
+
+    // factor -> char
+    case tChar:
+      n = character();
+      break;
+
+    // factor -> string
+    case tString:
+      n = stringConst(s);
+      break;
+
+    // factor -> "(" expression ")"
     case tLParens:
       Consume(tLParens);
       n = expression(s);
       Consume(tRParens);
+      break;
+
+    // factor -> subroutineCall
+    case tIdent:
+      n = subroutineCall(s);
+      break;
+
+    // factor -> "!" factor
+    case tNot:
+      Consume(tNot, &t);
+      CAstExpression *e = factor(s);
+      n = new CAstUnaryOp(t, opNot, e);
       break;
 
     default:
@@ -483,19 +532,41 @@ CAstType* CPaser::type(void)
   //
   CToken t;
 
+  // type -> base type | type ...
   EToken tt = _scanner->Get().GetType();
-  switch (tt) {
-    case kBool:
-      break;
-    case kChar:
-      break;
-    case kNumber:
-      break;
-    default:
-      break;
+
+  // type -> ... "[" [ number ] "]"
+  while (!_abort) {
+    Consume(tLBrak);
+
+    // TODO
+
+    Consume(tRBrak);
   }
 
-  return new CAstType(t, NULL);
+  return new CAstType(t, NULL); // FIXME
+}
+
+CAstDesignator* CPaser::qualident(CAstScope *s)
+{
+  //
+  // qualident ::= ident { "[" expression "]" }
+  //
+  CToken t;
+
+  // qualident -> ident ...
+  CAstDesignator* id = ident(s);
+
+  // qualident -> ... "[" expression "]" ...
+  while (!_abort) {
+    Consume(tLBrak);
+
+    // TODO
+
+    Consume(tRBrak);
+  }
+
+  return id; // FIXME
 }
 
 CAstDesignator* CParser::ident(CAstScope *s)
@@ -543,7 +614,7 @@ CAstConstant* CParser::boolean(void)
   EToken tt = _scanner->Get().GetType();
   switch (tt) {
     case kTrue:
-      b = 1;
+      b = !b;
     case kFalse:
       break;
     default:
@@ -567,7 +638,7 @@ CAstConstant* CParser::character(void)
   return new CAstConstant(t, CTypeManager::Get()->GetChar(), ch);
 }
 
-CAstStringConstant* CParser::string(CAstScope* s)
+CAstStringConstant* CParser::stringConst(CAstScope* s)
 {
   //
   // string := '"' { character } '"'.
