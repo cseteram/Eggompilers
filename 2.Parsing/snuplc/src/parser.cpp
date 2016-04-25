@@ -124,9 +124,6 @@ CAstModule* CParser::module(void)
   //
   // module ::= "module" ident ";" varDeclaration { subroutineDecl }
   //            "begin" stateSequence "end" ident ".".
-  // varDeclaration ::= [ "var" varDeclSequence ";" ].
-  // varDeclSequence ::= varDecl { ";" varDecl }.
-  // varDecl ::= ident { "," ident } ":" type.
   // subroutineDecl ::= (procedureDecl | functionDecl) subroutineBody ident ";".
   //
 
@@ -189,18 +186,23 @@ CAstModule* CParser::module(void)
   return m;
 }
 
-void CParser::varDeclaration(CAstScope *s) {
-  Etoken tt;
+void CParser::varDeclaration(CAstScope *s)
+{
+  //
+  // varDeclaration ::= [ "var" varDeclSequence ";" ].
+  // varDeclSequence ::= varDecl { ";" varDecl }.
+  //
 
   // varDeclaration -> "var" ...
-  tt = _scanner->Peek().GetType();
+  EToken tt = _scanner->Peek().GetType();
   if (tt == kVar) {
     Consume(kVar);
 
     // varDeclaration -> ... varDeclSequence ...
-    // varDeclSequence -> varDecl { ";" varDecl }.
     do {
       CAstType *ttype;
+
+      // varDeclSequence -> ... varDecl ...
       vector<string> l = varDecl(ttype);
 
       for (const auto &str : l) {
@@ -208,19 +210,19 @@ void CParser::varDeclaration(CAstScope *s) {
         s->GetSymbolTable()->AddSymbol(global_var);
       }
       
+      // varDeclSequence -> ... ";" ...
       Consume(tSemicolon);
       tt = _scanner->Peek().GetType();
     } while (tt != kProc && tt != kFunc && tt != kBegin);
   }
-
-  return;
 }
 
 vector<string> CParser::varDecl(CAstType *ttype)
 {
+  //
+  // varDecl ::= ident { "," ident } ":" type.
+  //
   vector<string> l;
-
-  // varDecl -> ident { "," ident } ":" type.
   
   while (!_abort) {
     CToken e = _scanner->Get();
@@ -269,13 +271,17 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   // funtionDecl ::= "function" ident [ formalParam ] ":" type ";".
   // formalParam ::= "(" [ varDeclSequence ] ")".
   //
-  
   CToken t;
+
+  // functionDecl -> "function" ...
   Consume(kFunc, &t);
+
+  // functionDecl -> ... ident ...
   CToken e = _scanner->Get();
   if (e.GetType() != tIdent)
     SetError(e, "function identifier expected");
 
+  // functionDecl -> ... [ formalParam ] ":" type ";"
   const string &functionName = e.GetName();
   CSymProc *symbol = formalParam(functionName);
   Consume(tSemicolon);
@@ -285,6 +291,10 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
 
 CSymProc* CParser::formalParam(const string &name)
 {
+  //
+  // funtionDecl ::= "function" ident [ formalParam ] ":" type ";".
+  // formalParam ::= "(" [ varDeclSequence ] ")".
+  //
   CTypeManager *tm = CTypeManager::Get();
   CAstType *ttype;
   vector<vector<string> > paramNamesSet;
@@ -292,8 +302,10 @@ CSymProc* CParser::formalParam(const string &name)
 
   CToken e = _scanner->Peek();
   if (e.GetType() == tLBrak) {
+    // formalParam -> "(" ...
     Consume(tLBrak);
 
+    // formalParam -> ... varDeclSequence ...
     e = _scanner->Peek();
     if (e.GetType() != tRBrak) {
       do {
@@ -311,23 +323,23 @@ CSymProc* CParser::formalParam(const string &name)
       } while (_abort);
     }
 
+    // formalParam -> ... ")"
     Consume(tRBrak);
   }
 
+  // functionDecl -> ... ":" type ...
   e = _scanner->Peek();
   if (e.GetType() == tColon) {
     Consume(tColon);
     ttype = type();
   }
-  Consume(tSemicolon);
 
-  // All CTypes must be managed by CTypeManager,
-  // since all constructors in CType class are "protected".
-  const CType *return_type = (ttype == NULL ? (tm->GetNull()) : (ttype->GetType()));
+  const CType *return_type =
+    (!ttype ? tm->GetNull() : ttype->GetType());
   CSymProc *symbol = new CSymProc(name, return_type);
 
   // add params to symbol
-  for (int i = 0, j = 0 ; i < (int) paramNamesSet.size() ; i++) {
+  for (int i = 0, j = 0; i < (int) paramNamesSet.size(); i++) {
     vector<string> &paramNames = paramNamesSet[i];
     CAstType* paramType = paramTypes[i];
     
@@ -344,19 +356,13 @@ void CParser::subroutineBody(CAstScope *s)
 {
   //
   // subroutineBody ::= varDeclaration "begin" statSequence "end".
-  // varDeclaration ::= [ "var" varDeclSequence ";" ].
-  // varDeclSequence ::= varDecl { ";" varDecl }.
-  // varDecl ::= ident { "," ident } ":" type.
   //
-
   varDeclaration(s);
   Consume(kBegin);
   CAstStatement *statseq = statSequence(s);
   Consume(kEnd);
 
   s->SetStatementSequence(statseq);
-
-  return;
 }
 
 CAstStatement* CParser::statSequence(CAstScope *s)
