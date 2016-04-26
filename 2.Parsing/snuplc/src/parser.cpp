@@ -534,7 +534,7 @@ CAstStatIf* CParser::ifStatement(CAstScope *s)
   CToken t;
 
   // ifStatement -> "if" "(" expression ")" "then" stateSequence ...
-  Consume(kIf);
+  Consume(kIf, &t);
   Consume(tLParen);
   CAstExpression *cond = expression(s);
   Consume(tRParen);
@@ -559,7 +559,7 @@ CAstStatWhile* CParser::whileStatement(CAstScope *s)
   //
   CToken t;
 
-  Consume(kWhile);
+  Consume(kWhile, &t);
   Consume(tLParen);
   CAstExpression *cond = expression(s);
   Consume(tRParen);
@@ -579,10 +579,11 @@ CAstStatReturn* CParser::returnStatement(CAstScope *s)
   CAstExpression *expr = NULL;
 
   // returnStatement -> "return" ...
-  Consume(kReturn);
+  Consume(kReturn, &t);
 
   // returnStatement -> ... expression
-  if (false /* TODO: FIRST(expression) && !FOLLOW(expression) */)
+  EToken tt = _scanner->Peek().GetType();
+  if (tt != kEnd && tt != tSemicolon)
     expr = expression(s);
 
   return new CAstStatReturn(t, s, expr);
@@ -623,29 +624,42 @@ CAstExpression* CParser::expression(CAstScope* s)
 CAstExpression* CParser::simpleexpr(CAstScope *s)
 {
   //
-  // simpleexpr ::= ["+"|"-"] term { termOp term }.
+  // simpleexpr ::= [ "+" | "-" ] term { termOp term }.
   // termOp ::= "+" | "-" | "||".
   //
-  CAstExpression *n = NULL;
+  CToken t;
 
-  // TODO: add unary
-
-  // simpleexpr -> ... term ...
-  n = term(s);
-
-  // simpleexpr -> ... termOp term ...
-  while (_scanner->Peek().GetType() == tPlusMinus) {
-    CToken t;
-    CAstExpression *l = n, *r;
-
-    // FIXME
+  // simpleexpr -> [ "+" | "-" ] ...
+  bool hasUnary = false;
+  if (_scanner->Peek().GetType() == tPlusMinus) {
+    hasUnary = true;
     Consume(tPlusMinus, &t);
-
-    r = term(s);
-
-    n = new CAstBinaryOp(t, t.GetValue() == "+" ? opAdd : opSub, l, r);
   }
 
+  // simpleexpr -> ... term ...
+  CAstExpression *n = term(s);
+
+  for (CToken tt = _scanner->Peek(); ; tt = _scanner->Peek()) {
+    // termOp -> "+" | "-" | "||"
+    EOperation eop;
+    if (tt.GetValue() == "||") {
+      Consume(tAndOr, &t);
+      eop = opOr;
+    }
+    else if (tt.GetType() == tPlusMinus) {
+      Consume(tPlusMinus, &t);
+      eop = tt.GetValue() == "+" ? opAdd : opSub;
+    }
+    else break;
+
+    // simpleexpr -> ... term ...
+    CAstExpression *l = n, *r = term(s);
+
+    n = new CAstBinaryOp(t, eop, l, r);
+  }
+
+  if (hasUnary)
+    return new CAstUnaryOp(t, t.GetValue() == "+" ? opPos : opNeg, n);
 
   return n;
 }
@@ -655,25 +669,27 @@ CAstExpression* CParser::term(CAstScope *s)
   //
   // term ::= factor { factOp factor }.
   //
-  CAstExpression *n = NULL;
 
   // term -> factor ...
-  n = factor(s);
+  CAstExpression *n = factor(s);
 
-  // term -> ... factOp factor ...
-  EToken tt = _scanner->Peek().GetType();
-  while ((tt == tMulDiv)) {
-    CToken t;
-    CAstExpression *l = n, *r;
+  for (CToken t = _scanner->Peek(); ; t = _scanner->Peek()) {
+    // factOp -> "*" | "/" | "&&"
+    EOperation eop;
+    if (t.GetValue() == "&&") {
+      Consume(tAndOr, &t);
+      eop = opAnd;
+    }
+    else if (t.GetType() == tMulDiv) {
+      Consume(tMulDiv, &t);
+      eop = t.GetValue() == "*" ? opMul : opDiv;
+    }
+    else break;
 
-    // FIXME
-    Consume(tMulDiv, &t);
+    // term -> ... facter ...
+    CAstExpression *l = n, *r = factor(s);
 
-    r = factor(s);
-
-    n = new CAstBinaryOp(t, t.GetValue() == "*" ? opMul : opDiv, l, r);
-
-    tt = _scanner->Peek().GetType();
+    n = new CAstBinaryOp(t, eop, l, r);
   }
 
   return n;
