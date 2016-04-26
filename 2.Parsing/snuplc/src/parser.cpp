@@ -211,8 +211,8 @@ void CParser::varDeclaration(CAstScope *s)
       varDecl(l, ttype, allVars);
 
       for (const auto &str : l) {
-        CSymbol *global_var = s->CreateVar(str, ttype->GetType());
-        s->GetSymbolTable()->AddSymbol(global_var);
+        CSymbol *var = s->CreateVar(str, ttype->GetType());
+        s->GetSymbolTable()->AddSymbol(var);
       }
 
       // varDeclaration -> ... ";"
