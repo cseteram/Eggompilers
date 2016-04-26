@@ -298,9 +298,17 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
 
   CSymProc *symbol = new CSymProc(procedureName, CTypeManager::Get()->GetNull());
   AddParameters(symbol, paramNames, paramTypes);
+
   s->GetSymbolTable()->AddSymbol(symbol); // add procedure symbol to global symbol table
 
-  return new CAstProcedure(t, procedureName, s, symbol);
+  CAstProcedure *ret = new CAstProcedure(t, procedureName, s, symbol);
+  for (int i = 0; i < (int) paramNames.size(); i++) {
+    // add parameter symbol to local symbol table
+    CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
+    ret->GetSymbolTable()->AddSymbol(sym);
+  }
+
+  return ret;
 }
 
 CAstProcedure* CParser::functionDecl(CAstScope *s)
@@ -320,8 +328,8 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
 
   // functionDecl -> ... [ formalParam ] ...
   const string &functionName = e.GetName();
-  if (s->GetSymbolTable()->FindSymbol(procedureName, sGlobal))
-    SetError(e, "procedure re-declaration");
+  if (s->GetSymbolTable()->FindSymbol(functionName, sGlobal))
+    SetError(e, "function re-declaration");
 
   vector<string> paramNames;
   vector<CAstType*> paramTypes;
@@ -347,8 +355,15 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   CSymProc *symbol = new CSymProc(functionName, returnType->GetType()); 
   AddParameters(symbol, paramNames, paramTypes);
   s->GetSymbolTable()->AddSymbol(symbol); // add function symbol to global symbol table
+  
+  CAstProcedure *ret = new CAstProcedure(t, functionName, s, symbol);
+  for (int i = 0; i < (int) paramNames.size(); i++) {
+    // add parameter symbol to local symbol table
+    CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
+    ret->GetSymbolTable()->AddSymbol(sym);
+  }
 
-  return new CAstProcedure(t, functionName, s, symbol);
+  return ret;
 }
 
 void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTypes)
