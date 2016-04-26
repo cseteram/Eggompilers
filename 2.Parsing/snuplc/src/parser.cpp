@@ -283,6 +283,11 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
     case tIdent:
       formalParam(paramNames, paramTypes);
       break;
+    case tSemicolon:
+      break;
+    default:
+      SetError(e, "tIdent or tSemicolon expected");
+      break;
   }
 
   // procedureDecl -> ... ";"
@@ -309,7 +314,7 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   if (e.GetType() != tIdent)
     SetError(e, "function identifier expected");
 
-  // functionDecl -> ... [ formalParam ] ":" type ...
+  // functionDecl -> ... [ formalParam ] ...
   const string &functionName = e.GetName();
   vector<string> paramNames;
   vector<CAstType*> paramTypes;
@@ -321,15 +326,15 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
       formalParam(paramNames, paramTypes);
       break;
     case tColon:
-      Consume(tColon);
-      returnType = type();
       break;
     default:
       SetError(e, "tIdent or tColon expected");
       break;
   }
 
-  // functionDecl -> ... ";"
+  // functionDecl -> ... ":" type ";"
+  Consume(tColon);
+  returnType = type();
   Consume(tSemicolon);
   
   CSymProc *symbol = new CSymProc(functionName, returnType->GetType()); 
@@ -348,7 +353,7 @@ void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTy
   // formalParam -> ... [ varDeclSequence ] ...
   // varDeclSequence ::= varDecl { ";" varDecl }
   
-  e = _scanner->Peek();
+  CToken e = _scanner->Peek();
   if (e.GetType() == tIdent) {
     do {
       vector<string> l;
@@ -369,7 +374,7 @@ void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTy
   return;  
 }
 
-void CParser::AddParameters(CSymProc *symbol, vector<string> &paramNames, vector<string> &paramTypes)
+void CParser::AddParameters(CSymProc *symbol, vector<string> &paramNames, vector<CAstType*> &paramTypes)
 {
   int index = 0;
 
