@@ -157,14 +157,11 @@ CAstModule* CParser::module(void)
   //
   // module ::= "module" ident ";" varDeclaration { subroutineDecl }
   //            "begin" stateSequence "end" ident ".".
-  // subroutineDecl ::= (procedureDecl | functionDecl) subroutineBody ident ";".
-  // procedureDecl ::= "procedure" ident [ formalParam ] ";".
-  // functionDecl ::= "function" ident [ formalParam ] ":" type ";".
-  
+  // 
   CToken t;
 
   // module -> "module" ident ";" ...
-  Consume(kModule);
+  Consume(kModule, &t);
   CToken tModuleIdent = _scanner->Get();
   if (tModuleIdent.GetType() != tIdent)
     SetError(tModuleIdent, "module identifier expected");
@@ -394,23 +391,28 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
 void CParser::formalParam
   (vector<string> &paramNames, vector<CAstType*> &paramTypes)
 {
+  //
   // formalParam ::= "(" [ varDeclSequence ] ")".
+  //
 
   // formalParam -> "(" ...
   Consume(tLParen);
   
   // formalParam -> ... [ varDeclSequence ] ...
-  // varDeclSequence ::= varDecl { ";" varDecl }
-  
+  // varDeclSequence -> varDecl { ";" varDecl }
   CToken e = _scanner->Peek();
   if (e.GetType() == tIdent) {
     do {
       vector<string> l;
-      CAstType* ttype;
+      CAstType *ttype;
       varDecl(l, ttype, paramNames);
 
-      for (int i = 0; i < (int) l.size() ; i++)
+      for (int i = 0; i < (int) l.size() ; i++) {
+        if (ttype->GetType()->IsArray())
+          ttype =
+            new CAstType(ttype->GetToken(), CTypeManager::Get()->GetPointer(ttype->GetType()));
         paramTypes.push_back(ttype);
+      }
 
       e = _scanner->Peek();
       if (e.GetType() == tRParen) 
@@ -428,7 +430,7 @@ void CParser::AddParameters
 {
   int cnt = 0;
 
-  // add params to symbol 
+  // create parameter symbols and add them to symbol table for subroutine
   for (int i = 0; i < (int) paramNames.size() ; i++) {
     string &paramName = paramNames[i];
     CAstType* paramType = paramTypes[i];
@@ -474,16 +476,11 @@ CAstStatement* CParser::statSequence(CAstScope *s)
         {
           const CSymbol *sym = s->GetSymbolTable()->FindSymbol(tt.GetValue(), sLocal);
           if (!sym) sym = s->GetSymbolTable()->FindSymbol(tt.GetValue(), sGlobal);
+          if (!sym) SetError(tt, "undefined variable \"" + tt.GetValue() + "\"");
 
-          if (sym) {
-            ESymbolType stype = sym->GetSymbolType();
-            if (stype == stProcedure)
-              st = subroutineCall(s);
-            else
-              st = assignment(s);
-          }
-          else
-            SetError(tt, "undefined variable \"" + tt.GetValue() + "\"");
+          ESymbolType stype = sym->GetSymbolType();
+          if (stype == stProcedure) st = subroutineCall(s);
+          else st = assignment(s);
         }
         break;
 
@@ -530,11 +527,14 @@ CAstStatAssign* CParser::assignment(CAstScope *s)
   // assignment ::= qualident ":=" expression.
   //
   CToken t;
-  CAstDesignator *lhs = NULL;
-  
-  lhs = qualident(s);
+
+  // assignment -> qualident ...
+  CAstDesignator *lhs = qualident(s);
+
+  // assignment -> ... ":=" ...
   Consume(tAssign, &t);
 
+  // assignment -> ... expression
   CAstExpression *rhs = expression(s);
 
   return new CAstStatAssign(t, lhs, rhs);
@@ -566,14 +566,16 @@ CAstFunctionCall* CParser::functionCall(CAstScope *s)
   const CSymbol *symbol = s->GetSymbolTable()->FindSymbol(t.GetValue(), sGlobal);
   if (!symbol)
     SetError(t, "undeclared subroutine name");
-  CAstFunctionCall *func = new CAstFunctionCall(t, dynamic_cast<const CSymProc*>(symbol));
+
+  CAstFunctionCall *func =
+    new CAstFunctionCall(t, dynamic_cast<const CSymProc*>(symbol));
   
   // subroutineCall -> ... "(" ...
   Consume(tLParen);
 
   while (_scanner->Peek().GetType() != tRParen) {
     // subroutineCall -> ... expression ...
-    func->AddArg(expression(s));
+    func->AddArg(addressExpression(s));
 
     // subroutineCall -> ... "," ...
     if (_scanner->Peek().GetType() == tComma)
@@ -584,6 +586,32 @@ CAstFunctionCall* CParser::functionCall(CAstScope *s)
   Consume(tRParen);
 
   return func;
+}
+
+CAstExpression* CParser::addressExpression(CAstScope *s)
+{
+  //
+  // addressExpression ::= "&" expression
+  // implcit casting
+  //
+  CToken t = _scanner->Peek();
+
+  if (t.GetType() == tIdent) {
+    CSymtab *symtab = s->GetSymbolTable();
+
+    const CSymbol *symbol = symtab->FindSymbol(t.GetValue(), sLocal);
+    if (!symbol) symbol = symtab->FindSymbol(t.GetValue(), sGlobal);
+    if (!symbol) SetError(t, "undeclared identifier.");
+
+    if (symbol->GetDataType()->IsArray()) {
+      const CPointerType *ptrtype =
+        NULL;
+        //CTypeManager::Get()->GetPointer(symbol->GetDataType());
+      return new CAstSpecialOp(t, opAddress, expression(s), ptrtype);
+    }
+  }
+  
+  return expression(s);
 }
 
 CAstStatIf* CParser::ifStatement(CAstScope *s)
@@ -805,7 +833,7 @@ CAstExpression* CParser::factor(CAstScope *s)
             n = qualident(s);
         }
         else 
-          SetError(tt, "undefined variable.");
+          SetError(tt, "undefined identifier.");
       }
       break;
 
@@ -834,38 +862,45 @@ CAstType* CParser::type(void)
   //
   CToken t;
   const CType *ttype = NULL;
-  CTypeManager *tm = CTypeManager::Get();
   vector<long long> index;
 
+  // varDecl -> ... type
+  // functionDecl -> ... type ...
   Consume(kType, &t);
 
-  const string &typeValue = t.GetValue();
-  if (typeValue == "integer")
-    ttype = tm->GetInt();
-  else if (typeValue == "char")
-    ttype = tm->GetChar();
+  // type -> basetype
+  // basetype -> "boolean" | "char" | "integer"
+  if (t.GetValue() == "boolean")
+    ttype = CTypeManager::Get()->GetBool();
+  else if (t.GetValue() == "char")
+    ttype = CTypeManager::Get()->GetChar();
+  else if (t.GetValue() == "integer")
+    ttype = CTypeManager::Get()->GetInt();
   else
-    ttype = tm->GetBool();
+    SetError(t, "invalid base type: " + t.GetValue());
 
   CToken tt = _scanner->Peek();
   while (tt.GetType() == tLBrak) {
+    // type -> ... "[" ...
     Consume(tLBrak);
 
+    // type -> ... number ...
     if (_scanner->Peek().GetType() != tRBrak)
       index.push_back(number()->GetValue());
     else
       index.push_back(CArrayType::OPEN);
 
+    // type -> ... "]"
     Consume(tRBrak);
     if (_scanner->Peek().GetType() != tLBrak)
       break;
   }
 
+  // type -> ... "[" "]"
   if (!index.empty()) {
-      const CType* innertype = ttype;
-    for(int i = (int) index.size() - 1; i >= 0; i--) {
-      innertype = tm->GetArray(index[i], innertype);
-    }
+    const CType* innertype = ttype;
+    for(int i = (int) index.size() - 1; i >= 0; i--)
+      innertype = CTypeManager::Get()->GetArray(index[i], innertype);
     ttype = innertype;
   }
 
@@ -877,30 +912,30 @@ CAstDesignator* CParser::qualident(CAstScope *s)
   //
   // qualident ::= ident { "[" expression "]" }
   //
-  CToken t;
 
   // qualident -> ident ...
   CAstDesignator *id = ident(s);
 
-  // qualident -> ... { "[" expression "]" }
   EToken tt = _scanner->Peek().GetType();
   if (tt == tLBrak) {
     const CToken saveToken = id->GetToken();
     const CSymbol* saveSymbol = id->GetSymbol();
 
     free(id);
-    CAstArrayDesignator *id2 = new CAstArrayDesignator(saveToken, saveSymbol);
+    CAstArrayDesignator *arrayId = new CAstArrayDesignator(saveToken, saveSymbol);
     while (tt == tLBrak) {
-        Consume(tLBrak);
-        // expression(s);
-        // dynamic_cast<CAstArrayDesignator*>(id)->AddIndex(expression(s));
-        // ((CAstArrayDesignator) id)->AddIndex(expression(s));
-        id2->AddIndex(expression(s));
-        Consume(tRBrak);
-        tt = _scanner->Peek().GetType();
+      // qualident -> ... "[" ...
+      Consume(tLBrak);
+
+      // qualident -> ... expression ...
+      arrayId->AddIndex(expression(s));
+
+      // qualident -> ... "]" ...
+      Consume(tRBrak);
+      tt = _scanner->Peek().GetType();
     }
 
-    return id2;
+    return arrayId;
   }
 
   return id;
@@ -918,7 +953,7 @@ CAstDesignator* CParser::ident(CAstScope *s)
   CSymtab *symtab = s->GetSymbolTable();
   const CSymbol *symbol = symtab->FindSymbol(t.GetValue(), sLocal);
   if (!symbol) symbol = symtab->FindSymbol(t.GetValue(), sGlobal);
-  if (!symbol) SetError(t, "undeclared variable.");
+  if (!symbol) SetError(t, "undeclared identifier.");
 
   return new CAstDesignator(t, symbol);
 }
@@ -946,12 +981,9 @@ CAstConstant* CParser::boolean(void)
   // boolean ::= "true" | "false".
   //
   CToken t;
-  long long b = 1; // initial value : true
 
   Consume(kBool, &t);
-
-  if (t.GetValue() == "false")
-    b = 0;
+  long long b = (t.GetValue() == "false") ? 0 : 1;
 
   return new CAstConstant(t, CTypeManager::Get()->GetBool(), b);
 }

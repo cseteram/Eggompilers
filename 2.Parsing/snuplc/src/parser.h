@@ -111,6 +111,7 @@ class CParser {
 
     CAstStatCall*         subroutineCall(CAstScope *s);
     CAstFunctionCall*     functionCall(CAstScope *s);
+    CAstExpression*       addressExpression(CAstScope *s);
 
     CAstStatIf*           ifStatement(CAstScope *s);
     CAstStatWhile*        whileStatement(CAstScope *s);
