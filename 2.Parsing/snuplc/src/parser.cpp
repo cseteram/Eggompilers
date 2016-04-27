@@ -205,6 +205,8 @@ CAstModule* CParser::module(void)
       SetError(t, "subroutine identifier not matched");
     Consume(tIdent);
     Consume(tSemicolon);
+
+    tt = _scanner->Peek().GetType();
   }
 
   // module -> ... "begin" statSequence "end" ...
@@ -316,13 +318,13 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
 
   e = _scanner->Peek();
   switch (e.GetType()) {
-    case tIdent:
+    case tLParen:
       formalParam(paramNames, paramTypes);
       break;
     case tSemicolon:
       break;
     default:
-      SetError(e, "tIdent or tSemicolon expected");
+      SetError(e, "tLParen or tSemicolon expected");
       break;
   }
 
@@ -370,13 +372,13 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   
   e = _scanner->Peek();
   switch (e.GetType()) {
-    case tIdent:
+    case tLParen:
       formalParam(paramNames, paramTypes);
       break;
     case tColon:
       break;
     default:
-      SetError(e, "tIdent or tColon expected");
+      SetError(e, "tLParen or tColon expected");
       break;
   }
 
@@ -404,7 +406,7 @@ void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTy
   // formalParam ::= "(" [ varDeclSequence ] ")".
 
   // formalParam -> "(" ...
-  Consume(tLBrak);
+  Consume(tLParen);
   
   // formalParam -> ... [ varDeclSequence ] ...
   // varDeclSequence ::= varDecl { ";" varDecl }
@@ -419,13 +421,15 @@ void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTy
       for (int i = 0; i < (int) l.size() ; i++)
         paramTypes.push_back(ttype);
 
-      if (e.GetType() == tRBrak) break;
+      e = _scanner->Peek();
+      if (e.GetType() == tRParen) 
+        break;
       else Consume(tSemicolon);
-    } while (_abort);
-
-    // formalParam -> ... ")"
-    Consume(tRBrak);
+    } while (!_abort);
   }
+
+  // formalParam -> ... ")";
+  Consume(tRParen);
 
   return;  
 }
@@ -470,7 +474,7 @@ CAstStatement* CParser::statSequence(CAstScope *s)
   CAstStatement *tail = NULL;
 
   CToken tt = _scanner->Peek();
-  while (!_abort && tt.GetType() != kEnd) {
+  while (!_abort && tt.GetType() != kEnd && tt.GetType() != kElse) {
     CAstStatement *st = NULL;
 
     // stateSequence -> ... statement ...
@@ -522,7 +526,7 @@ CAstStatement* CParser::statSequence(CAstScope *s)
     tail = st;
 
     tt = _scanner->Peek();
-    if (tt.GetType() == kEnd) break;
+    if (tt.GetType() == kEnd || tt.GetType() == kElse) break;
 
     // stateSequence -> ... ";" ...
     Consume(tSemicolon);
@@ -539,14 +543,10 @@ CAstStatAssign* CParser::assignment(CAstScope *s)
   CToken t;
   CAstDesignator *lhs = NULL;
   
-  cout << "qualident" << endl;
   lhs = qualident(s);
-  cout << "qualident end" << endl;
   Consume(tAssign, &t);
 
-  cout << "expression" << endl;
   CAstExpression *rhs = expression(s);
-  cout << "expression end" << endl;
 
   return new CAstStatAssign(t, lhs, rhs);
 }
@@ -582,14 +582,13 @@ CAstFunctionCall* CParser::functionCall(CAstScope *s)
   // subroutineCall -> ... "(" ...
   Consume(tLParen);
 
-  EToken tt = _scanner->Peek().GetType();
-  while (tt != tRParen) {
+  while (_scanner->Peek().GetType() != tRParen) {
     // subroutineCall -> ... expression ...
     func->AddArg(expression(s));
 
     // subroutineCall -> ... "," ...
-    EToken tt = _scanner->Peek().GetType();
-    if (tt == tComma) Consume(tComma);
+    if (_scanner->Peek().GetType() == tComma)
+        Consume(tComma);
   }
 
   // subroutineCall -> ... ")"
@@ -871,7 +870,7 @@ CAstType* CParser::type(void)
       index.push_back(CArrayType::OPEN);
 
     Consume(tRBrak);
-    if (_scanner->Peek().GetType() == tSemicolon)
+    if (_scanner->Peek().GetType() != tLBrak)
       break;
   }
 
@@ -916,9 +915,6 @@ CAstDesignator* CParser::qualident(CAstScope *s)
 
     return id2;
   }
-
-  cout << "qualident END" << endl;
-  cout << "the next token is " << _scanner->Peek().GetValue() << endl;
 
   return id;
 }
