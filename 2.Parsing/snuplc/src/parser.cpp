@@ -332,15 +332,15 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
   Consume(tSemicolon);
 
   CSymProc *symbol = new CSymProc(procedureName, CTypeManager::Get()->GetNull());
-  AddParameters(symbol, paramNames, paramTypes);
-
+  // AddParameters(symbol, paramNames, paramTypes);
   s->GetSymbolTable()->AddSymbol(symbol); // add procedure symbol to global symbol table
 
   CAstProcedure *ret = new CAstProcedure(t, procedureName, s, symbol);
+  AddParameters(ret, symbol, paramNames, paramTypes);
   for (int i = 0; i < (int) paramNames.size(); i++) {
     // add parameter symbol to local symbol table
-    CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
-    ret->GetSymbolTable()->AddSymbol(sym);
+    // CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
+    // ret->GetSymbolTable()->AddSymbol(symbol->GetParam(i));
   }
 
   return ret;
@@ -388,15 +388,18 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   Consume(tSemicolon);
   
   CSymProc *symbol = new CSymProc(functionName, returnType->GetType()); 
-  AddParameters(symbol, paramNames, paramTypes);
+  // AddParameters(symbol, paramNames, paramTypes);
   s->GetSymbolTable()->AddSymbol(symbol); // add function symbol to global symbol table
   
   CAstProcedure *ret = new CAstProcedure(t, functionName, s, symbol);
+  AddParameters(ret, symbol, paramNames, paramTypes);
+  
   for (int i = 0; i < (int) paramNames.size(); i++) {
     // add parameter symbol to local symbol table
-    CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
-    ret->GetSymbolTable()->AddSymbol(sym);
+    // CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
+    // ret->GetSymbolTable()->AddSymbol(symbol->GetParam(i));
   }
+  
 
   return ret;
 }
@@ -434,7 +437,7 @@ void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTy
   return;  
 }
 
-void CParser::AddParameters(CSymProc *symbol, vector<string> &paramNames, vector<CAstType*> &paramTypes)
+void CParser::AddParameters(CAstScope *s, CSymProc *symbol, vector<string> &paramNames, vector<CAstType*> &paramTypes)
 {
   int index = 0;
 
@@ -445,6 +448,8 @@ void CParser::AddParameters(CSymProc *symbol, vector<string> &paramNames, vector
 
     CSymParam* param = new CSymParam(index++, paramName, paramType->GetType());
     symbol->AddParam(param);
+    // symbol->GetSymbolTable()->AddSymbol(param);
+    s->GetSymbolTable()->AddSymbol(param);
   }
 
   return;
@@ -810,7 +815,6 @@ CAstExpression* CParser::factor(CAstScope *s)
       {
         const CSymbol* sym = s->GetSymbolTable()->FindSymbol(tt.GetValue());
         if (sym) {
-          cout << "factor -> qualident | subroutineCall" << endl;
           ESymbolType stype = sym->GetSymbolType();
           if (stype == stProcedure)
             n = functionCall(s);
@@ -927,7 +931,6 @@ CAstDesignator* CParser::ident(CAstScope *s)
   CToken t;
 
   Consume(tIdent, &t);
-  cout << "Consume : " << t.GetValue() << endl;
 
   CSymtab *symtab = s->GetSymbolTable();
   const CSymbol *symbol = symtab->FindSymbol(t.GetValue(), sLocal);
@@ -978,7 +981,7 @@ CAstConstant* CParser::character(void)
   CToken t;
 
   Consume(tChar, &t);
-  long long ch = (long long) (t.GetValue()[0]);
+  long long ch = (long long) CToken::unescape(t.GetValue())[0];
 
   return new CAstConstant(t, CTypeManager::Get()->GetChar(), ch);
 }
