@@ -324,24 +324,19 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
     case tSemicolon:
       break;
     default:
-      SetError(e, "tLParen or tSemicolon expected");
+      SetError(e, "\"(\" or \";\" expected");
       break;
   }
 
   // procedureDecl -> ... ";"
   Consume(tSemicolon);
 
-  CSymProc *symbol = new CSymProc(procedureName, CTypeManager::Get()->GetNull());
-  // AddParameters(symbol, paramNames, paramTypes);
-  s->GetSymbolTable()->AddSymbol(symbol); // add procedure symbol to global symbol table
+  CSymProc *symbol =
+    new CSymProc(procedureName, CTypeManager::Get()->GetNull());
+  s->GetSymbolTable()->AddSymbol(symbol);
 
   CAstProcedure *ret = new CAstProcedure(t, procedureName, s, symbol);
   AddParameters(ret, symbol, paramNames, paramTypes);
-  for (int i = 0; i < (int) paramNames.size(); i++) {
-    // add parameter symbol to local symbol table
-    // CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
-    // ret->GetSymbolTable()->AddSymbol(symbol->GetParam(i));
-  }
 
   return ret;
 }
@@ -378,7 +373,7 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
     case tColon:
       break;
     default:
-      SetError(e, "tLParen or tColon expected");
+      SetError(e, "\"(\" or \":\" expected");
       break;
   }
 
@@ -388,23 +383,16 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   Consume(tSemicolon);
   
   CSymProc *symbol = new CSymProc(functionName, returnType->GetType()); 
-  // AddParameters(symbol, paramNames, paramTypes);
-  s->GetSymbolTable()->AddSymbol(symbol); // add function symbol to global symbol table
+  s->GetSymbolTable()->AddSymbol(symbol);
   
   CAstProcedure *ret = new CAstProcedure(t, functionName, s, symbol);
   AddParameters(ret, symbol, paramNames, paramTypes);
-  
-  for (int i = 0; i < (int) paramNames.size(); i++) {
-    // add parameter symbol to local symbol table
-    // CSymbol *sym = ret->CreateVar(paramNames[i], paramTypes[i]->GetType());
-    // ret->GetSymbolTable()->AddSymbol(symbol->GetParam(i));
-  }
-  
 
   return ret;
 }
 
-void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTypes)
+void CParser::formalParam
+  (vector<string> &paramNames, vector<CAstType*> &paramTypes)
 {
   // formalParam ::= "(" [ varDeclSequence ] ")".
 
@@ -433,26 +421,22 @@ void CParser::formalParam(vector<string> &paramNames, vector<CAstType*> &paramTy
 
   // formalParam -> ... ")";
   Consume(tRParen);
-
-  return;  
 }
 
-void CParser::AddParameters(CAstScope *s, CSymProc *symbol, vector<string> &paramNames, vector<CAstType*> &paramTypes)
+void CParser::AddParameters
+  (CAstScope *s, CSymProc *symbol, vector<string> &paramNames, vector<CAstType*> &paramTypes)
 {
-  int index = 0;
+  int cnt = 0;
 
   // add params to symbol 
   for (int i = 0; i < (int) paramNames.size() ; i++) {
     string &paramName = paramNames[i];
     CAstType* paramType = paramTypes[i];
 
-    CSymParam* param = new CSymParam(index++, paramName, paramType->GetType());
+    CSymParam* param = new CSymParam(cnt++, paramName, paramType->GetType());
     symbol->AddParam(param);
-    // symbol->GetSymbolTable()->AddSymbol(param);
     s->GetSymbolTable()->AddSymbol(param);
   }
-
-  return;
 }
 
 void CParser::subroutineBody(CAstScope *s)
@@ -715,16 +699,18 @@ CAstExpression* CParser::simpleexpr(CAstScope *s)
 
   // simpleexpr -> ... term ...
   CAstExpression *n = term(s);
+  if (hasUnary)
+    n = new CAstUnaryOp(t, t.GetValue() == "+" ? opPos : opNeg, n);
 
   for (CToken tt = _scanner->Peek(); ; tt = _scanner->Peek()) {
     // termOp -> "+" | "-" | "||"
     EOperation eop;
     if (tt.GetValue() == "||") {
-      Consume(tAndOr, &t);
+      Consume(tAndOr, &tt);
       eop = opOr;
     }
     else if (tt.GetType() == tPlusMinus) {
-      Consume(tPlusMinus, &t);
+      Consume(tPlusMinus, &tt);
       eop = tt.GetValue() == "+" ? opAdd : opSub;
     }
     else break;
@@ -732,11 +718,8 @@ CAstExpression* CParser::simpleexpr(CAstScope *s)
     // simpleexpr -> ... term ...
     CAstExpression *l = n, *r = term(s);
 
-    n = new CAstBinaryOp(t, eop, l, r);
+    n = new CAstBinaryOp(tt, eop, l, r);
   }
-
-  if (hasUnary)
-    return new CAstUnaryOp(t, t.GetValue() == "+" ? opPos : opNeg, n);
 
   return n;
 }
