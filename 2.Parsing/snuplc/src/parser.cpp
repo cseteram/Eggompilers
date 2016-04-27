@@ -115,6 +115,41 @@ bool CParser::Consume(EToken type, CToken *token)
 void CParser::InitSymbolTable(CSymtab *s)
 {
   CTypeManager *tm = CTypeManager::Get();
+  CSymProc *fun;
+
+  // function DIM(array: pointer to array; dim: integer): integer
+  fun = new CSymProc("DIM", tm->GetInt());
+  fun->AddParam(new CSymParam(0, "arr", tm->GetVoidPtr()));
+  fun->AddParam(new CSymParam(1, "dim", tm->GetInt()));
+  s->AddSymbol(fun);
+
+  // function DOFS(array: pointer to array): integer;
+  fun = new CSymProc("DOFS", tm->GetInt());
+  fun->AddParam(new CSymParam(0, "arr", tm->GetVoidPtr()));
+  s->AddSymbol(fun);
+
+  // function ReadInt() : integer;
+  fun = new CSymProc("ReadInt", tm->GetInt());
+  s->AddSymbol(fun);
+
+  // procedure WriteChar(c: char);
+  fun = new CSymProc("WriteChar", tm->GetNull());
+  fun->AddParam(new CSymParam(0, "c", tm->GetChar()));
+  s->AddSymbol(fun);
+
+  // procedure WriteInt(i: integer);
+  fun = new CSymProc("WriteInt", tm->GetNull());
+  fun->AddParam(new CSymParam(0, "i", tm->GetInt()));
+  s->AddSymbol(fun);
+
+  // procedure WriteLn();
+  fun = new CSymProc("WriteLn", tm->GetNull());
+  s->AddSymbol(fun);
+
+  // procedure WriteStr(string: char[]);
+  fun = new CSymProc("WriteStr", tm->GetNull());
+  fun->AddParam(new CSymParam(0, "str", tm->GetPointer(tm->GetArray(CArrayType::OPEN, tm->GetChar()))));
+  s->AddSymbol(fun);
 
   // TODO: add predefined functions here
 }
@@ -137,8 +172,8 @@ CAstModule* CParser::module(void)
     SetError(tModuleIdent, "module identifier expected");
   Consume(tSemicolon);
 
-  CAstModule *m = new CAstModule(t, tModuleIdent.GetName());
-  // CSymtab *symtab = m->GetSymbolTable();
+  CAstModule *m = new CAstModule(t, tModuleIdent.GetValue());
+  InitSymbolTable(m->GetSymbolTable());
 
   // module -> ... varDeclaration ...
   varDeclaration(m);
@@ -168,7 +203,7 @@ CAstModule* CParser::module(void)
 
     // subroutineDecl -> ... ident ";".
     CToken t = _scanner->Peek();
-    if (t.GetType() != tIdent || t.GetName() != sub->GetName())
+    if (t.GetType() != tIdent || t.GetValue() != sub->GetName())
       SetError(t, "subroutine identifier not matched");
     Consume(tIdent);
     Consume(tSemicolon);
@@ -274,7 +309,7 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
     SetError(e, "procedure identifier expected");
 
   // procedureDecl -> ... [ formalParam ] ...
-  const string &procedureName = e.GetName();
+  const string &procedureName = e.GetValue();
   if (s->GetSymbolTable()->FindSymbol(procedureName, sGlobal))
     SetError(e, "procedure re-declaration");
 
@@ -327,7 +362,7 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
     SetError(e, "function identifier expected");
 
   // functionDecl -> ... [ formalParam ] ...
-  const string &functionName = e.GetName();
+  const string &functionName = e.GetValue();
   if (s->GetSymbolTable()->FindSymbol(functionName, sGlobal))
     SetError(e, "function re-declaration");
 
@@ -436,11 +471,12 @@ CAstStatement* CParser::statSequence(CAstScope *s)
   CAstStatement *head = NULL;
   CAstStatement *tail = NULL;
 
-  do {
+  CToken tt = _scanner->Peek();
+  while (_abort && tt.GetType() != kEnd) {
     CAstStatement *st = NULL;
 
     // stateSequence -> ... statement ...
-    CToken tt = _scanner->Peek();
+    tt = _scanner->Peek();
     switch (tt.GetType()) {
       // statement -> assignment | subroutineCall
       case tIdent:
@@ -493,8 +529,8 @@ CAstStatement* CParser::statSequence(CAstScope *s)
 
     // stateSequence -> ... ";" ...
     Consume(tSemicolon);
-  } while (!_abort);
-  
+  }
+
   return head;
 }
 
