@@ -119,31 +119,27 @@ void CParser::InitSymbolTable(CSymtab *s)
 
   // function DIM(array: pointer to array; dim: integer): integer
   fun = new CSymProc("DIM", tm->GetInt());
-  fun->AddParam(new CSymParam(0, "arr", tm->GetVoidPtr()));
+  fun->AddParam(new CSymParam(0, "arr", tm->GetPointer(tm->GetNull())));
   fun->AddParam(new CSymParam(1, "dim", tm->GetInt()));
   s->AddSymbol(fun);
 
   // function DOFS(array: pointer to array): integer;
   fun = new CSymProc("DOFS", tm->GetInt());
-  fun->AddParam(new CSymParam(0, "arr", tm->GetVoidPtr()));
+  fun->AddParam(new CSymParam(0, "arr", tm->GetPointer(tm->GetNull())));
   s->AddSymbol(fun);
 
   // function ReadInt() : integer;
   fun = new CSymProc("ReadInt", tm->GetInt());
   s->AddSymbol(fun);
 
-  // procedure WriteChar(c: char);
-  fun = new CSymProc("WriteChar", tm->GetNull());
-  fun->AddParam(new CSymParam(0, "c", tm->GetChar()));
-  s->AddSymbol(fun);
-
   // procedure WriteInt(i: integer);
   fun = new CSymProc("WriteInt", tm->GetNull());
   fun->AddParam(new CSymParam(0, "i", tm->GetInt()));
   s->AddSymbol(fun);
-
-  // procedure WriteLn();
-  fun = new CSymProc("WriteLn", tm->GetNull());
+  
+  // procedure WriteChar(c: char);
+  fun = new CSymProc("WriteChar", tm->GetNull());
+  fun->AddParam(new CSymParam(0, "c", tm->GetChar()));
   s->AddSymbol(fun);
 
   // procedure WriteStr(string: char[]);
@@ -151,7 +147,9 @@ void CParser::InitSymbolTable(CSymtab *s)
   fun->AddParam(new CSymParam(0, "str", tm->GetPointer(tm->GetArray(CArrayType::OPEN, tm->GetChar()))));
   s->AddSymbol(fun);
 
-  // TODO: add predefined functions here
+  // procedure WriteLn();
+  fun = new CSymProc("WriteLn", tm->GetNull());
+  s->AddSymbol(fun);
 }
 
 CAstModule* CParser::module(void)
@@ -472,7 +470,7 @@ CAstStatement* CParser::statSequence(CAstScope *s)
   CAstStatement *tail = NULL;
 
   CToken tt = _scanner->Peek();
-  while (_abort && tt.GetType() != kEnd) {
+  while (!_abort && tt.GetType() != kEnd) {
     CAstStatement *st = NULL;
 
     // stateSequence -> ... statement ...
@@ -494,7 +492,6 @@ CAstStatement* CParser::statSequence(CAstScope *s)
           else
             SetError(tt, "undefined variable \"" + tt.GetValue() + "\"");
         }
-        st = assignment(s);
         break;
 
       // statement -> ifStatement
@@ -542,10 +539,14 @@ CAstStatAssign* CParser::assignment(CAstScope *s)
   CToken t;
   CAstDesignator *lhs = NULL;
   
+  cout << "qualident" << endl;
   lhs = qualident(s);
+  cout << "qualident end" << endl;
   Consume(tAssign, &t);
 
+  cout << "expression" << endl;
   CAstExpression *rhs = expression(s);
+  cout << "expression end" << endl;
 
   return new CAstStatAssign(t, lhs, rhs);
 }
@@ -805,11 +806,12 @@ CAstExpression* CParser::factor(CAstScope *s)
       Consume(tRParen);
       break;
 
-    // factor -> subroutineCall
+    // factor -> qualident | subroutineCall
     case tIdent:
       {
         const CSymbol* sym = s->GetSymbolTable()->FindSymbol(tt.GetValue());
         if (sym) {
+          cout << "factor -> qualident | subroutineCall" << endl;
           ESymbolType stype = sym->GetSymbolType();
           if (stype == stProcedure)
             n = functionCall(s);
@@ -818,10 +820,8 @@ CAstExpression* CParser::factor(CAstScope *s)
         }
         else 
           SetError(tt, "undefined variable.");
-    
-        n = functionCall(s);
-        break;
       }
+      break;
 
     // factor -> "!" factor
     case tNot:
@@ -847,52 +847,43 @@ CAstType* CParser::type(void)
   // basetype ::= "boolean" | "char" | "integer".
   //
   CToken t;
-  CToken *ttype = NULL;
+  const CType *ttype = NULL;
+  CTypeManager *tm = CTypeManager::Get();
+  vector<long long> index;
 
   Consume(kType, &t);
 
   const string &typeValue = t.GetValue();
-  /* TODO 
   if (typeValue == "integer")
-    ttype = CTypeManager::Get()->GetInt();
+    ttype = tm->GetInt();
   else if (typeValue == "char")
-    ttype = CTypeManager::Get()->GetChar();
+    ttype = tm->GetChar();
   else
-    ttype = CTypeManager::Get()->GetBool();
-  */
+    ttype = tm->GetBool();
 
-  // TODO : array
   CToken tt = _scanner->Peek();
-  bool isOpenArray = false;
   while (tt.GetType() == tLBrak) {
     Consume(tLBrak);
 
-    // TODO : delete following 2 lines
     if (_scanner->Peek().GetType() != tRBrak)
-      number();
-    
-    /*
-    // type -> ... "[" number "]" ...
-    if (_scanner->Peek().GetType() != tRBrak) {
-      CAstConstant *n = number();
-      type = CTypeManager::Get()->GetArray(n->GetValue(), type);
-    }
-    // type -> ... "[" "]" ...
-    else {
-      if (!isOpenArray) {
-        type = CTypeManager::Get()->GetPointer(type);
-        isOpenArray = true;
-      }
-
-      type = CTypeManager::Get()->GetArray(OPEN, type);
-    }
-    */
+      index.push_back(number()->GetValue());
+    else
+      index.push_back(CArrayType::OPEN);
 
     Consume(tRBrak);
+    if (_scanner->Peek().GetType() == tSemicolon)
+      break;
   }
 
-  // return new CAstType(t, type);
-  return new CAstType(t, CTypeManager::Get()->GetInt());
+  if (!index.empty()) {
+      const CType* innertype = ttype;
+    for(int i = (int) index.size() - 1; i >= 0; i--) {
+      innertype = tm->GetArray(index[i], innertype);
+    }
+    ttype = innertype;
+  }
+
+  return new CAstType(t, ttype);
 }
 
 CAstDesignator* CParser::qualident(CAstScope *s)
@@ -905,15 +896,29 @@ CAstDesignator* CParser::qualident(CAstScope *s)
   // qualident -> ident ...
   CAstDesignator *id = ident(s);
 
-  // TODO : FIX IT.
   // qualident -> ... { "[" expression "]" }
   EToken tt = _scanner->Peek().GetType();
-  while (tt == tLBrak) {
-    Consume(tLBrak);
-    expression(s);
-    // ((CAstArrayDesignator) id)->AddIndex(expression(s));
-    Consume(tRBrak);
+  if (tt == tLBrak) {
+    const CToken saveToken = id->GetToken();
+    const CSymbol* saveSymbol = id->GetSymbol();
+
+    free(id);
+    CAstArrayDesignator *id2 = new CAstArrayDesignator(saveToken, saveSymbol);
+    while (tt == tLBrak) {
+        Consume(tLBrak);
+        // expression(s);
+        // dynamic_cast<CAstArrayDesignator*>(id)->AddIndex(expression(s));
+        // ((CAstArrayDesignator) id)->AddIndex(expression(s));
+        id2->AddIndex(expression(s));
+        Consume(tRBrak);
+        tt = _scanner->Peek().GetType();
+    }
+
+    return id2;
   }
+
+  cout << "qualident END" << endl;
+  cout << "the next token is " << _scanner->Peek().GetValue() << endl;
 
   return id;
 }
@@ -926,6 +931,7 @@ CAstDesignator* CParser::ident(CAstScope *s)
   CToken t;
 
   Consume(tIdent, &t);
+  cout << "Consume : " << t.GetValue() << endl;
 
   CSymtab *symtab = s->GetSymbolTable();
   const CSymbol *symbol = symtab->FindSymbol(t.GetValue(), sLocal);
