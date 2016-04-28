@@ -269,7 +269,7 @@ void CParser::varDecl(vector<string> &vars, CAstType* &ttype, vector<string> &al
       
     for (const auto &var : allVars) {
       if (var == e.GetValue()) {
-        SetError(e, e.GetValue() + " : re-declaration variable");
+        SetError(e, "re-declaration variable \"" + e.GetValue() + "\"");
         return;
       }
     }
@@ -308,7 +308,7 @@ CAstProcedure* CParser::procedureDecl(CAstScope *s)
   // procedureDecl -> ... [ formalParam ] ...
   const string &procedureName = e.GetValue();
   if (s->GetSymbolTable()->FindSymbol(procedureName, sGlobal))
-    SetError(e, "procedure re-declaration");
+    SetError(e, "re-declaration procedure \"" + procedureName + "\"" );
 
   vector<string> paramNames;
   vector<CAstType*> paramTypes;
@@ -356,7 +356,7 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   // functionDecl -> ... [ formalParam ] ...
   const string &functionName = e.GetValue();
   if (s->GetSymbolTable()->FindSymbol(functionName, sGlobal))
-    SetError(e, "function re-declaration");
+    SetError(e, "re-declaration function \"" + functionName + "\"");
 
   vector<string> paramNames;
   vector<CAstType*> paramTypes;
@@ -479,7 +479,7 @@ CAstStatement* CParser::statSequence(CAstScope *s)
         {
           const CSymbol *sym = s->GetSymbolTable()->FindSymbol(tt.GetValue(), sLocal);
           if (!sym) sym = s->GetSymbolTable()->FindSymbol(tt.GetValue(), sGlobal);
-          if (!sym) SetError(tt, "undefined variable \"" + tt.GetValue() + "\"");
+          if (!sym) SetError(tt, "undeclared variable \"" + tt.GetValue() + "\"");
 
           ESymbolType stype = sym->GetSymbolType();
           if (stype == stProcedure) st = subroutineCall(s);
@@ -810,7 +810,7 @@ CAstExpression* CParser::factor(CAstScope *s)
             n = qualident(s);
         }
         else 
-          SetError(tt, "undefined identifier.");
+          SetError(tt, "undeclared variable \"" + tt.GetValue() + "\"");
       }
       break;
 
@@ -930,7 +930,7 @@ CAstDesignator* CParser::ident(CAstScope *s)
   CSymtab *symtab = s->GetSymbolTable();
   const CSymbol *symbol = symtab->FindSymbol(t.GetValue(), sLocal);
   if (!symbol) symbol = symtab->FindSymbol(t.GetValue(), sGlobal);
-  if (!symbol) SetError(t, "undeclared identifier.");
+  if (!symbol) SetError(t, "undeclared variable \"" + t.GetValue() + "\"");
 
   return new CAstDesignator(t, symbol);
 }
@@ -947,7 +947,10 @@ CAstConstant* CParser::number(void)
   errno = 0;
   long long v = strtoll(t.GetValue().c_str(), NULL, 10);
   if (errno != 0) SetError(t, "invalid number.");
-  if (v > (1LL << 31)) SetError(t, "invalid number.");
+
+  long long absv = (v > 0 ? v : (-v));
+  if (absv > (1LL << 31)) SetError(t, "invalid number.");
+  // INT_MAX + 1 will be handled when phase 3 : type checking
 
   return new CAstConstant(t, CTypeManager::Get()->GetInt(), v);
 }
