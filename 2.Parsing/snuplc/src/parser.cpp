@@ -408,9 +408,12 @@ void CParser::formalParam
       varDecl(l, ttype, paramNames);
 
       for (int i = 0; i < (int) l.size() ; i++) {
-        if (ttype->GetType()->IsArray())
-          ttype =
-            new CAstType(ttype->GetToken(), CTypeManager::Get()->GetPointer(ttype->GetType()));
+        /*
+        if (ttype->GetType()->IsArray()) {
+          const CPointerType *ptrtype =
+            CTypeManager::Get()->GetPointer(ttype->GetType());
+          ttype = new CAstType(ttype->GetToken(), ptrtype);
+        }*/
         paramTypes.push_back(ttype);
       }
 
@@ -575,7 +578,7 @@ CAstFunctionCall* CParser::functionCall(CAstScope *s)
 
   while (_scanner->Peek().GetType() != tRParen) {
     // subroutineCall -> ... expression ...
-    func->AddArg(addressExpression(s));
+    func->AddArg(expression(s));
 
     // subroutineCall -> ... "," ...
     if (_scanner->Peek().GetType() == tComma)
@@ -586,32 +589,6 @@ CAstFunctionCall* CParser::functionCall(CAstScope *s)
   Consume(tRParen);
 
   return func;
-}
-
-CAstExpression* CParser::addressExpression(CAstScope *s)
-{
-  //
-  // addressExpression ::= "&" expression
-  // implcit casting
-  //
-  CToken t = _scanner->Peek();
-
-  if (t.GetType() == tIdent) {
-    CSymtab *symtab = s->GetSymbolTable();
-
-    const CSymbol *symbol = symtab->FindSymbol(t.GetValue(), sLocal);
-    if (!symbol) symbol = symtab->FindSymbol(t.GetValue(), sGlobal);
-    if (!symbol) SetError(t, "undeclared identifier.");
-
-    if (symbol->GetDataType()->IsArray()) {
-      const CPointerType *ptrtype =
-        NULL;
-        //CTypeManager::Get()->GetPointer(symbol->GetDataType());
-      return new CAstSpecialOp(t, opAddress, expression(s), ptrtype);
-    }
-  }
-  
-  return expression(s);
 }
 
 CAstStatIf* CParser::ifStatement(CAstScope *s)
