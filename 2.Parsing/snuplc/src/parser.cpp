@@ -408,11 +408,12 @@ void CParser::formalParam
       varDecl(l, ttype, paramNames);
 
       for (int i = 0; i < (int) l.size() ; i++) {
+        /*
         if (ttype->GetType()->IsArray()) {
           const CPointerType *ptrtype =
             CTypeManager::Get()->GetPointer(ttype->GetType());
           ttype = new CAstType(ttype->GetToken(), ptrtype);
-        }
+        }*/
         paramTypes.push_back(ttype);
       }
 
