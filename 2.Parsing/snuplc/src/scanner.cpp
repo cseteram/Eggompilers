@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-/// @brief SnuPL/0 scanner
+/// @brief SnuPL/1 scanner
 /// @author Bernhard Egger <bernhard@csap.snu.ac.kr>
 /// @section changelog Change Log
 /// 2012/09/14 Bernhard Egger created
 /// 2013/03/07 Bernhard Egger adapted to SnuPL/0
-/// 2016/03/11 Bernhard Egger adapted to SnuPL/1
-/// 2016/03/13 Bernhard Egger assignment 1: scans SnuPL/-1
+/// 2014/09/10 Bernhard Egger assignment 1: scans SnuPL/-1
+/// 2016/03/13 Bernhard Egger assignment 1: adapted to modified SnuPL/-1 syntax
 ///
 /// @section license_section License
 /// Copyright (c) 2012-2016, Bernhard Egger
@@ -47,18 +47,42 @@ using namespace std;
 //------------------------------------------------------------------------------
 // token names
 //
-#define TOKEN_STRLEN 16
+#define TOKEN_STRLEN 32
 
 char ETokenName[][TOKEN_STRLEN] = {
-  "tNumber",                        ///< number
+  "kModule",                        ///< module
+  "kBegin",                         ///< begin
+  "kEnd",                           ///< end
+  "kType",                          ///< boolean or char or integer (type)
+  "kBool",                          ///< true or false
+  "kIf",                            ///< if
+  "kThen",                          ///< then
+  "kElse",                          ///< else
+  "kWhile",                         ///< while
+  "kDo",                            ///< do
+  "kReturn",                        ///< return
+  "kVar",                           ///< var
+  "kProc",                          ///< procedure
+  "kFunc",                          ///< function
+
+  "tIdent",                         ///< an identifier
+  "tNumber",                        ///< a number
+  "tChar",                          ///< a character
+  "tString",                        ///< a string
   "tPlusMinus",                     ///< '+' or '-'
   "tMulDiv",                        ///< '*' or '/'
+  "tAndOr",                         ///< '&&' or '||'
+  "tNot",                           ///< a not operator
   "tRelOp",                         ///< relational operator
   "tAssign",                        ///< assignment operator
   "tSemicolon",                     ///< a semicolon
+  "tColon",                         ///< a colon
+  "tComma",                         ///< a comma
   "tDot",                           ///< a dot
-  "tLParens",                       ///< a left parenthesis
-  "tRParens",                       ///< a right parenthesis
+  "tLBrak",                         ///< a left bracket
+  "tRBrak",                         ///< a right bracket
+  "tLParen",                        ///< a left paren
+  "tRParen",                        ///< a right paren
 
   "tEOF",                           ///< end of file
   "tIOError",                       ///< I/O error
@@ -71,15 +95,39 @@ char ETokenName[][TOKEN_STRLEN] = {
 //
 
 char ETokenStr[][TOKEN_STRLEN] = {
-  "tNumber (%s)",                   ///< number
+  "kModule",                        ///< module
+  "kBegin",                         ///< begin
+  "kEnd",                           ///< end
+  "kType (%s)",                     ///< boolean or char or integer
+  "kBool (%s)",                     ///< true or false
+  "kIf",                            ///< if
+  "kThen",                          ///< then
+  "kElse",                          ///< else
+  "kWhile",                         ///< while
+  "kDo",                            ///< do
+  "kReturn",                        ///< return
+  "kVar",                           ///< var
+  "kProc",                          ///< procedure
+  "kFunc",                          ///< function
+
+  "tIdent (%s)",                    ///< an identifier
+  "tNumber (%s)",                   ///< a number
+  "tChar (%s)",                     ///< a character
+  "tString (%s)",                   ///< a string
   "tPlusMinus (%s)",                ///< '+' or '-'
   "tMulDiv (%s)",                   ///< '*' or '/'
+  "tAndOr (%s)",                    ///< '&&' or '||'
+  "tNot",                           ///< a not operator
   "tRelOp (%s)",                    ///< relational operator
   "tAssign",                        ///< assignment operator
   "tSemicolon",                     ///< a semicolon
+  "tColon",                         ///< a colon
+  "tComma",                         ///< a comma
   "tDot",                           ///< a dot
-  "tLParens",                       ///< a left parenthesis
-  "tRParens",                       ///< a right parenthesis
+  "tLBrak",                         ///< a left bracket
+  "tRBrak",                         ///< a right bracket
+  "tLParen",                        ///< a left paren
+  "tRParen",                        ///< a right paren
 
   "tEOF",                           ///< end of file
   "tIOError",                       ///< I/O error
@@ -92,6 +140,23 @@ char ETokenStr[][TOKEN_STRLEN] = {
 //
 pair<const char*, EToken> Keywords[] =
 {
+  {"module", kModule},
+  {"begin", kBegin},
+  {"end", kEnd},
+  {"boolean", kType},
+  {"char", kType},
+  {"integer", kType},
+  {"true", kBool},
+  {"false", kBool},
+  {"if", kIf},
+  {"then", kThen},
+  {"else", kElse},
+  {"while", kWhile},
+  {"do", kDo},
+  {"return", kReturn},
+  {"var", kVar},
+  {"procedure", kProc},
+  {"function", kFunc}
 };
 
 
@@ -144,7 +209,8 @@ ostream& CToken::print(ostream &out) const
 {
   int str_len = _value.length();
   str_len = TOKEN_STRLEN + (str_len < 64 ? str_len : 64);
-  char *str = (char*)malloc(str_len);
+
+  char *str = (char*) malloc((sizeof (char)) * str_len);
   snprintf(str, str_len, ETokenStr[GetType()], _value.c_str());
   out << dec << _line << ":" << _char << ": " << str;
   free(str);
@@ -195,7 +261,7 @@ string CToken::unescape(const string text)
   }
 
   return s;
-}
+}  
 
 ostream& operator<<(ostream &out, const CToken &t)
 {
@@ -244,10 +310,9 @@ CScanner::~CScanner()
 void CScanner::InitKeywords(void)
 {
   if (keywords.size() == 0) {
-    int size = sizeof(Keywords) / sizeof(Keywords[0]);
-    for (int i=0; i<size; i++) {
+    int size = sizeof (Keywords) / sizeof (Keywords[0]);
+    for (int i = 0; i < size; i++)
       keywords[Keywords[i].first] = Keywords[i].second;
-    }
   }
 }
 
@@ -274,7 +339,7 @@ void CScanner::NextToken()
   _token = Scan();
 }
 
-void CScanner::RecordStreamPosition(void)
+void CScanner::RecordStreamPosition()
 {
   _saved_line = _line;
   _saved_char = _char;
@@ -293,27 +358,31 @@ CToken* CScanner::NewToken(EToken type, const string token)
 
 CToken* CScanner::Scan()
 {
-  EToken token;
-  string tokval;
-  char c;
+  while(OnRemove()) {
+    while (_in->good() && IsWhite(_in->peek()))
+      GetChar();
 
-  while (_in->good() && IsWhite(_in->peek())) GetChar();
+    if (_in->good() && IsComment(_in->peek()))
+      DeleteLine();
+  }
 
   RecordStreamPosition();
 
   if (_in->eof()) return NewToken(tEOF);
   if (!_in->good()) return NewToken(tIOError);
 
-  c = GetChar();
-  tokval = c;
-  token = tUndefined;
+  char c = GetChar();
+  string tokval(1, c);
+  EToken token = tUndefined;
 
   switch (c) {
     case ':':
-      if (_in->peek() == '=') {
+      if (_in->good() && (_in->peek() == '=')) {
         tokval += GetChar();
         token = tAssign;
       }
+      else if (_in->good())
+        token = tColon;
       break;
 
     case '+':
@@ -326,38 +395,105 @@ CToken* CScanner::Scan()
       token = tMulDiv;
       break;
 
+    case '&':
+    case '|':
+      if (_in->good() && (_in->peek() == c)) {
+        tokval += GetChar();
+        token = tAndOr;
+      }
+      break;
+
+    case '!':
+      token = tNot;
+      break;
+
     case '=':
     case '#':
       token = tRelOp;
+      break;
+
+    case '<':
+    case '>':
+      if (_in->good()) {
+        token = tRelOp;
+        if (_in->peek() == '=')
+          tokval += GetChar();
+      }
       break;
 
     case ';':
       token = tSemicolon;
       break;
 
+    case ',':
+      token = tComma;
+      break;
+
     case '.':
       token = tDot;
       break;
 
+    case '\'':
+      ScanChar(token, tokval);
+
+      if (token == tChar)
+        TrimQuotation(tokval);
+      break;
+
+    case '\"':
+      ScanString(token, tokval);
+
+      if (token == tString)
+        TrimQuotation(tokval);
+      break;
+
+    case '[':
+      token = tLBrak;
+      break;
+
+    case ']':
+      token = tRBrak;
+      break;
+
     case '(':
-      token = tLParens;
+      token = tLParen;
       break;
 
     case ')':
-      token = tRParens;
+      token = tRParen;
       break;
 
     default:
-      if (IsNum(c)) {
-        while (IsNum(_in->peek())) tokval += GetChar();
+      /* number */
+      if (IsDigit(c)) {
         token = tNumber;
-      } else {
-        tokval = "invalid character '";
-        tokval += c;
-        tokval += "'";
+        while (_in->good()) {
+          char nc = _in->peek();
+          if (!IsDigit(nc)) 
+            break;
+          tokval += GetChar();
+        }
       }
-      break;
 
+      /* identifier or keywords */
+      else if (IsLetter(c)) {
+        token = tIdent;
+
+        while (_in->good()) {
+          char nc = _in->peek();
+          if (!IsLetter(nc) && !IsDigit(nc))
+            break;
+          tokval += GetChar();
+        }
+        
+        auto iter = keywords.find(tokval);
+        if (iter != keywords.end())
+          token = iter->second;
+        else
+          keywords[tokval] = token;
+      }
+
+      break;
   }
 
   return NewToken(token, tokval);
@@ -366,33 +502,217 @@ CToken* CScanner::Scan()
 char CScanner::GetChar()
 {
   char c = _in->get();
-  if (c == '\n') { _line++; _char = 1; } else _char++;
+  if (c == '\n') {
+    _line++;
+    _char = 1;
+  }
+  else _char++;
   return c;
 }
 
 string CScanner::GetChar(int n)
 {
   string str;
-  for (int i=0; i<n; i++) str += GetChar();
+  for (int i = 0; i < n; i++)
+    str += GetChar();
   return str;
+}
+
+bool CScanner::OnRemove()
+{
+  return (_in->good() && (IsWhite(_in->peek()) || IsComment(_in->peek())));
+}
+
+
+void CScanner::DeleteLine()
+{
+  while (_in->good() && _in->peek() != '\n' && _in->peek() != EOF)
+    GetChar();
+
+  if (_in->good() && (_in->peek() == '\n' || _in->peek() == EOF))
+    GetChar();
 }
 
 bool CScanner::IsWhite(char c) const
 {
-  return ((c == ' ') || (c == '\t') || (c == '\n'));
+  return ((c == ' ') || (c == '\n') || (c == '\t'));
 }
 
-bool CScanner::IsAlpha(char c) const
+bool CScanner::IsComment(char c)
 {
-  return ((('a' <= c) && (c <= 'z')) || (('A' <= c) && (c <= 'Z')) || (c == '_'));
+  bool retval = false;
+
+  if (c == '/')
+  {
+    _in->get();
+    if (!_in->good()) return false;
+    if (_in->peek() == '/') retval = true;
+    _in->unget();
+  }
+
+  return retval;
 }
 
-bool CScanner::IsNum(char c) const
+void CScanner::ScanChar(EToken &token, string &tokval)
 {
-  return (('0' <= c) && (c <= '9'));
+  bool faced_escape = false;
+  bool waiting_quot = false;
+
+  while (_in->good()) {
+    char c = _in->peek();
+
+    if (c == EOF) break;
+    else if (waiting_quot) {
+      if (c == '\'') {
+        token = tChar;
+        tokval += GetChar();
+      }
+      break;
+    }
+    else if (!IsAsciiChar(c)) {
+      tokval += GetChar();
+      break;
+    }
+    else if (c == '\\' && !faced_escape) {
+      faced_escape = true;
+      tokval += GetChar();
+    }
+    else if (faced_escape) {
+      faced_escape = false;
+      waiting_quot = true;
+      tokval.pop_back();
+
+      bool valid = true;
+      switch (c) {
+        case '\"':
+        case '\'':
+        case '\\':
+          tokval += GetChar();
+          break;
+
+        case 'n':
+          tokval += '\n';
+          GetChar();
+          break;
+
+        case 't':
+          tokval += '\t';
+          GetChar();
+          break;
+
+        case '0':
+          tokval += '\0';
+          GetChar();
+          break;
+
+        default:
+          valid = false;
+          tokval += '\\';
+          tokval += GetChar();
+          break; 
+      }
+
+      if (!valid) break;
+    }
+    else if (c == '\'') {
+      tokval += GetChar();
+      break;
+    }
+    else {
+      tokval += GetChar();
+      waiting_quot = true;
+    }
+  }
 }
 
-bool CScanner::IsIDChar(char c) const
+void CScanner::ScanString(EToken &token, string &tokval)
 {
-  return (IsAlpha(c) || IsNum(c));
+  token = tString;
+
+  bool faced_escape = false;
+  while (_in->good()) {
+    char c = _in->peek();
+
+    if (c == EOF) {
+      token = tUndefined;
+      break;
+    }
+    else if (!IsAsciiChar(c)) {
+      token = tUndefined;
+      tokval += GetChar();
+    }
+    else if (c == '\\') {
+      faced_escape ^= true;
+      GetChar();
+
+      if (faced_escape)
+        tokval += c;
+    }
+    else if (faced_escape) {
+      faced_escape = false;
+      tokval.pop_back();
+
+      switch (c) {
+        case '\"':
+        case '\'':
+          tokval += GetChar();
+          break;
+
+        case 'n':
+          tokval += '\n';
+          GetChar();
+          break;
+
+        case 't':
+          tokval += '\t';
+          GetChar();
+          break;
+
+        case '0':
+          tokval += '\0';
+          GetChar();
+          break;
+
+        default:
+          token = tUndefined;
+          tokval += '\\';
+          tokval += GetChar();
+          break;
+      }
+    }
+    else if (c == '\"') {
+      tokval += GetChar();
+      break;
+    }
+    else
+      tokval += GetChar();
+  }
+
+  if (tokval.back() != '\"')
+    token = tUndefined;
+}
+
+void CScanner::TrimQuotation(string &tokval)
+{
+  tokval = tokval.substr(1, (int) tokval.size() - 2);
+}
+
+bool CScanner::IsAsciiChar(char c) const
+{
+  return ' ' <= c && c <= '~';
+}
+
+bool CScanner::IsLetter(char c) const
+{
+  if ('A' <= c && c <= 'Z')
+    return true;
+  if ('a' <= c && c <= 'z')
+    return true;
+  
+  return c == '_';
+}
+
+bool CScanner::IsDigit(char c) const
+{
+  return '0' <= c && c <= '9';   
 }
