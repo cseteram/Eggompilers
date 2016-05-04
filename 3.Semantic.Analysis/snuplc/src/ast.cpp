@@ -973,7 +973,7 @@ CAstSpecialOp::CAstSpecialOp(CToken t, EOperation oper, CAstExpression *e,
                              const CType *type)
   : CAstOperation(t, oper), _operand(e), _type(type)
 {
-  assert((oper == opAddress) || (oper == opDeref) || (oper = opCast));
+  assert((oper == opAddress) || (oper == opDeref) || (oper == opCast));
   assert(e != NULL);
   assert(((oper != opCast) && (type == NULL)) ||
          ((oper == opCast) && (type != NULL)));
@@ -1273,7 +1273,7 @@ const CType* CAstArrayDesignator::GetType(void) const
     }
 
     ret = dynamic_cast<const CArrayType*>(ret)->GetInnerType();
-  }   
+  }
 
   return ret;
 }

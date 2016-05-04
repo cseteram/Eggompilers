@@ -157,11 +157,6 @@ class CParser {
     /// @retval CAstFunctionCall which represents this function call (from factor)
     CAstFunctionCall*     functionCall(CAstScope *s);
 
-    /// @brief build up AST expression node by expression to address type casting
-    /// @param s AST scope node which owns this expression -> address type casting
-    /// @retval CAstExpression which represents this expression -> address type casting
-    CAstExpression*       addressExpression(CAstScope *s);
-
     /// @brief build up AST if-else statement node by if-else statement
     /// @param s AST scope node which owns this if-else statement
     /// @retval CAstStatIf which represents this if-else statement
@@ -181,6 +176,11 @@ class CParser {
     /// @param s AST scope node which owns this expression
     /// @retval CAstExpression which represents this expression
     CAstExpression*       expression(CAstScope *s);
+
+    /// @brief build up AST expression node by expression to address type casting
+    /// @param s AST scope node which owns this expression -> address type casting
+    /// @retval CAstExpression which represents this expression -> address type casting
+    CAstExpression*       addressExpression(CAstScope *s);
 
     /// @brief build up AST expression node by simple expression
     /// @param s AST scope node which owns this simple expression

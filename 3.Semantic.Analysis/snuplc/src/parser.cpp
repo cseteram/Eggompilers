@@ -408,12 +408,11 @@ void CParser::formalParam
       varDecl(l, ttype, paramNames);
 
       for (int i = 0; i < (int) l.size() ; i++) {
-        /*
         if (ttype->GetType()->IsArray()) {
           const CPointerType *ptrtype =
             CTypeManager::Get()->GetPointer(ttype->GetType());
           ttype = new CAstType(ttype->GetToken(), ptrtype);
-        }*/
+        }
         paramTypes.push_back(ttype);
       }
 
@@ -578,7 +577,7 @@ CAstFunctionCall* CParser::functionCall(CAstScope *s)
 
   while (_scanner->Peek().GetType() != tRParen) {
     // subroutineCall -> ... expression ...
-    func->AddArg(expression(s));
+    func->AddArg(addressExpression(s));
 
     // subroutineCall -> ... "," ...
     if (_scanner->Peek().GetType() == tComma)
@@ -685,6 +684,22 @@ CAstExpression* CParser::expression(CAstScope* s)
   }
   else
     return left;
+}
+
+CAstExpression* CParser::addressExpression(CAstScope* s)
+{
+  //
+  // addressExpression ::= "&" expression
+  // implicit type casting: array to pointer
+  //
+  CToken t = _scanner->Peek();
+  CAstExpression *e = expression(s);
+
+  cout << e->GetType();
+  if (e->GetType() != NULL && e->GetType()->IsArray())
+    return new CAstSpecialOp(t, opAddress, e, NULL);
+
+  return e;
 }
 
 CAstExpression* CParser::simpleexpr(CAstScope *s)
