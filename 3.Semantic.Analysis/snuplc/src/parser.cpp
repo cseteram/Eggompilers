@@ -695,8 +695,9 @@ CAstExpression* CParser::addressExpression(CAstScope* s)
   CToken t = _scanner->Peek();
   CAstExpression *e = expression(s);
 
-  cout << e->GetType();
-  if (e->GetType() != NULL && e->GetType()->IsArray())
+  if (!e->GetType())
+    SetError(t, "NULL type");
+  else if (e->GetType()->IsArray())
     return new CAstSpecialOp(t, opAddress, e, NULL);
 
   return e;
@@ -904,33 +905,39 @@ CAstDesignator* CParser::qualident(CAstScope *s)
   //
   // qualident ::= ident { "[" expression "]" }
   //
+  CToken t;
 
   // qualident -> ident ...
   CAstDesignator *id = ident(s);
 
-  EToken tt = _scanner->Peek().GetType();
-  if (tt == tLBrak) {
-    const CToken saveToken = id->GetToken();
-    const CSymbol* saveSymbol = id->GetSymbol();
+  t = _scanner->Peek();
+  if (t.GetType() != tLBrak)
+    return id;
 
-    free(id);
-    CAstArrayDesignator *arrayId = new CAstArrayDesignator(saveToken, saveSymbol);
-    while (tt == tLBrak) {
-      // qualident -> ... "[" ...
-      Consume(tLBrak);
+  const CToken saveToken = id->GetToken();
+  const CSymbol* saveSymbol = id->GetSymbol();
+  CAstArrayDesignator *arrayId = new CAstArrayDesignator(saveToken, saveSymbol);
 
-      // qualident -> ... expression ...
-      arrayId->AddIndex(expression(s));
-
-      // qualident -> ... "]" ...
-      Consume(tRBrak);
-      tt = _scanner->Peek().GetType();
-    }
-
-    return arrayId;
+  if (!arrayId->GetType()) {
+    SetError(t, "access with index which is actually not an array");
+    return id;
   }
 
-  return id;
+  free(id);
+
+  while (t.GetType() == tLBrak) {
+    // qualident -> ... "[" ...
+    Consume(tLBrak);
+
+    // qualident -> ... expression ...
+    arrayId->AddIndex(expression(s));
+
+    // qualident -> ... "]" ...
+    Consume(tRBrak);
+    t = _scanner->Peek();
+  }
+
+  return arrayId;
 }
 
 CAstDesignator* CParser::ident(CAstScope *s)

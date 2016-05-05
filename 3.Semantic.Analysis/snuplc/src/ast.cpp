@@ -1259,6 +1259,10 @@ bool CAstArrayDesignator::TypeCheck(CToken *t, string *msg) const
 const CType* CAstArrayDesignator::GetType(void) const
 {
   const CType *symbolType = GetSymbol()->GetDataType();
+
+  if (symbolType->IsPointer())
+    symbolType = dynamic_cast<const CPointerType*>(symbolType)->GetBaseType();
+
   if (!symbolType->IsArray())
     return NULL;
 
