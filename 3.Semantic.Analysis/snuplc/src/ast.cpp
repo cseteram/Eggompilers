@@ -168,12 +168,14 @@ bool CAstScope::TypeCheck(CToken *t, string *msg) const
   bool result = true;
 
   try {
+    // Typecheck for all statements
     CAstStatement *st = _statseq;
     while (result && st) {
       result = st->TypeCheck(t, msg);
       st = st->GetNext();
     }
 
+    // Typecheck for all child scopes
     size_t size = GetNumChildren();
     for (size_t i = 0; i < size; i++) {
       CAstScope *child = GetChild(i);
@@ -541,10 +543,10 @@ bool CAstStatReturn::TypeCheck(CToken *t, string *msg) const
   const CType *st = GetScope()->GetType();
   CAstExpression *e = GetExpression();
 
-  if (st->Match(CTypeManager::Get()->GetNull()) {
+  if (st->Match(CTypeManager::Get()->GetNull())) {
     if (e) {
       if (t) *t = e->GetToken();
-      if (msg) *mst = "procedure has no return value/expression.";
+      if (msg) *msg = "procedure has no return value/expression.";
       return false;
     }
   }
@@ -659,11 +661,25 @@ bool CAstStatIf::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  while (ifBody) {
+    if (!ifBody->TypeCheck(t, msg))
+      return false;
+    ifBody = ifBody->GetNext();
+  }
+
+  while (elseBody) {
+    if (!elseBody->TypeCheck(t, msg))
+      return false;
+    elseBody = elseBody->GetNext();
+  }
+
+  /*
   if (!ifBody->TypeCheck(t, msg))
     return false;
 
   if (!elseBody->TypeCheck(t, msg))
     return false;
+  */
 
   return true;
 }
@@ -777,8 +793,15 @@ bool CAstStatWhile::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  while (body) {
+    if (!body->TypeCheck(t, msg))
+      return false;
+    body = body->GetNext();
+  }
+  /*
   if (!body->TypeCheck(t, msg))
     return false;
+  */
 
   return true;
 }
