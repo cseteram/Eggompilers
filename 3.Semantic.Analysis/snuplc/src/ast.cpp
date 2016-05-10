@@ -938,14 +938,14 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   // remark that pointer type is scalar type
   // In SNUPL/1, there is no way to handle pointer in user mode
   // If we see this error, this means that there is something wrong in type conversion
-  if (!lt->IsPointer()) {
+  if (lt->IsPointer()) {
     if (t) *t = lhs->GetToken();
-    if (msg) *msg = "the type of LHS is not pointer type";
+    if (msg) *msg = "the type of LHS cannot be a pointer type";
     return false;
   }
-  if (!rt->IsPointer()) {
+  if (rt->IsPointer()) {
     if (t) *t = rhs->GetToken();
-    if (msg) *msg = "the type of RHS is not pointer type";
+    if (msg) *msg = "the type of RHS cannot be a pointer type";
     return false;
   }
 
@@ -998,13 +998,13 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     case opLessEqual:
     case opBiggerThan:
     case opBiggerEqual:
-      if (!lt->Match(tm->GetBool())) {
+      if (lt->Match(tm->GetBool())) {
         if (t) *t = lhs->GetToken();
         if (msg)
           *msg = "the type of LHS cannot be boolean type in this operation.";
         return false;
       }
-      if (!rt->Match(tm->GetBool())) {
+      if (rt->Match(tm->GetBool())) {
         if (t) *t = rhs->GetToken();
         if (msg)
           *msg = "the type of RHS cannot be boolean type in this operation.";
@@ -1346,6 +1346,33 @@ CAstExpression* CAstFunctionCall::GetArg(int index) const
 
 bool CAstFunctionCall::TypeCheck(CToken *t, string *msg) const
 {
+  CTypeManager *tm = CTypeManager::Get();
+  const CSymProc *proc = dynamic_cast<const CSymProc*>(_symbol);
+
+  if (GetNArgs() != proc->GetNParams()) {
+    if (t) *t = GetToken();
+    if (msg) *msg = "the number of parameters mismatched.";
+    return false;
+  }
+
+  for (int i = 0; i < GetNArgs(); i++) {
+    CAstExpression *expr = GetArg(i);
+    const CType* paramType = proc->GetParam(i)->GetDataType();
+    if (!expr->TypeCheck(t,msg))
+      return false;
+
+    if (!expr->GetType() || !paramType || !expr->GetType()->Match(paramType)) {
+      if (t) *t = expr->GetToken();
+      if (msg) {
+        *msg = "the type of parameters does not match "
+            "with the function/procedure's signature.";
+        cout << "arg : " << expr->GetType() << endl;
+        cout << "param : " << paramType << endl;
+      }
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -1427,6 +1454,12 @@ const CSymbol* CAstDesignator::GetSymbol(void) const
 
 bool CAstDesignator::TypeCheck(CToken *t, string *msg) const
 {
+  if (GetType() == NULL) {
+    if (t) *t = GetToken();
+    if (msg) *msg = "invalid designator type.";
+    return false;
+  }
+
   return true;
 }
 
@@ -1509,9 +1542,21 @@ CAstExpression* CAstArrayDesignator::GetIndex(int index) const
 
 bool CAstArrayDesignator::TypeCheck(CToken *t, string *msg) const
 {
+  CTypeManager *tm = CTypeManager::Get();
   bool result = true;
-
   assert(_done);
+
+  for (int i = 0; i < GetNIndices(); i++) {
+    CAstExpression *expr = GetIndex(i);
+    if (!expr->TypeCheck(t,msg))
+      return false;
+
+    if (!expr->GetType() || !expr->GetType()->Match(tm->GetInt())) {
+      if (t) *t = expr->GetToken();
+      if (msg) *msg = "the element in array should be accessed by integer index.";
+      return false;
+    }
+  }
 
   return result;
 }
@@ -1624,6 +1669,12 @@ string CAstConstant::GetValueStr(void) const
 
 bool CAstConstant::TypeCheck(CToken *t, string *msg) const
 {
+  if (_type == NULL) {
+    if (t) *t = GetToken();
+    if (msg) *msg = "invalid constant type.";
+    return false;
+  }
+
   return true;
 }
 
@@ -1700,15 +1751,21 @@ const string CAstStringConstant::GetValueStr(void) const
 
 bool CAstStringConstant::TypeCheck(CToken *t, string *msg) const
 {
+  if (_type == NULL) {
+    if (t) *t = GetToken();
+    if (msg) *msg = "invalid string constant type.";
+    return false;
+  }
+
   return true;
 }
 
 const CType* CAstStringConstant::GetType(void) const
 {
-  CTypeManager *tm = CTypeManager::Get();
+  // CTypeManager *tm = CTypeManager::Get();
+  // return tm->GetPointer(tm->GetArray(GetValueStr().size() + 1, tm->GetChar()));
 
-  return tm->GetPointer(tm->GetArray(GetValueStr().size() + 1, tm->GetChar()));
-  // return NULL
+  return _type;
 }
 
 ostream& CAstStringConstant::print(ostream &out, int indent) const
