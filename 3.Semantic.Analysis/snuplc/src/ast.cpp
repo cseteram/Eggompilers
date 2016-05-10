@@ -925,6 +925,109 @@ CAstExpression* CAstBinaryOp::GetRight(void) const
 
 bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
 {
+  CAstExpression *lhs = GetLeft(), *rhs = GetRight();
+  EOperation oper = GetOperation();
+  CTypeManager *tm = CTypeManager::Get();
+  
+  if (!lhs->TypeCheck(t,msg) || !rhs->TypeCheck(t,msg))
+    return false;
+  
+  // binary operation requires that both left type and right type are scalar type
+  const CType *lt = lhs->GetType(), *rt = rhs->GetType();
+  if (!lt->IsScalar()) {
+    if (t) *t = lhs->GetToken();
+    if (msg) *msg = "the type of LHS is not scalar type";
+    return false;
+  }
+  if (!rt->IsScalar()) {
+    if (t) *t = rhs->GetToken();
+    if (msg) *msg = "the type of RHS is not scalar type";
+    return false;
+  }
+
+  // check left type and right type is not pointer type 
+  // remark that pointer type is scalar type
+  // In SNUPL/1, there is no way to handle pointer in user mode
+  // If we see this error, this means that there is something wrong in type conversion
+  if (!lt->IsPointer()) {
+    if (t) *t = lhs->GetToken();
+    if (msg) *msg = "the type of LHS is not pointer type";
+    return false;
+  }
+  if (!rt->IsPointer()) {
+    if (t) *t = rhs->GetToken();
+    if (msg) *msg = "the type of RHS is not pointer type";
+    return false;
+  }
+
+  // binary operation requires that left type equals right type 
+  if (!lt->Match(rt)) {
+    if (t) *t = GetToken();
+    if (msg) 
+      *msg = "the type of LHS does not match with the type of RHS.";
+    return false;
+  }
+
+  switch (oper) {
+    case opAdd:
+    case opSub:
+    case opMul:
+    case opDiv:
+      if (!lt->Match(tm->GetInt())) {
+        if (t) *t = lhs->GetToken();
+        if (msg) 
+          *msg = "the type of LHS should has int type in this operation.";
+        return false;
+      }
+      if (!rt->Match(tm->GetInt())) {
+        if (t) *t = rhs->GetToken();
+        if (msg)
+          *msg = "the type of RHS should has int type in this operation.";
+        return false;
+      }
+      break;
+    case opAnd:
+    case opOr:
+      if (!lt->Match(tm->GetBool())) {
+        if (t) *t = lhs->GetToken();
+        if (msg)
+          *msg = "the type of LHS should has boolean type in this operation.";
+        return false;
+      }
+      if (!rt->Match(tm->GetBool())) {
+        if (t) *t = rhs->GetToken();
+        if (msg)
+          *msg = "the type of RHS should has boolean type in this operation.";
+        return false;
+      }
+      break;
+    case opEqual:
+    case opNotEqual:
+      // when operation is '=' or '#'
+      break;
+    case opLessThan:
+    case opLessEqual:
+    case opBiggerThan:
+    case opBiggerEqual:
+      if (!lt->Match(tm->GetBool())) {
+        if (t) *t = lhs->GetToken();
+        if (msg)
+          *msg = "the type of LHS cannot be boolean type in this operation.";
+        return false;
+      }
+      if (!rt->Match(tm->GetBool())) {
+        if (t) *t = rhs->GetToken();
+        if (msg)
+          *msg = "the type of RHS cannot be boolean type in this operation.";
+        return false;
+      }
+      break;
+    default:
+      if (t) *t = lhs->GetToken();
+      if (msg) *msg = "the operation is not valid.";
+      return false;
+  }
+
   return true;
 }
 
