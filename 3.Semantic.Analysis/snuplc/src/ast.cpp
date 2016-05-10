@@ -1127,6 +1127,32 @@ CAstExpression* CAstUnaryOp::GetOperand(void) const
 
 bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
 {
+  CAstExpression *operand = GetOperand();
+  EOperation oper = GetOperation();
+  CTypeManager *tm = CTypeManager()::Get();
+
+  switch (oper) {
+    case opNeg:
+    case opPos:
+      if (!operand->GetType()->Match(tm->GetInt())) {
+        if (t) *t = operand->GetToken();
+        if (msg) *msg = "the type of operand should be int type in this operation."
+        return false;
+      }
+      break;
+    case opNot:
+      if (!operand->GetType()->Match(tm->GetBool())) {
+        if (t) *t = operand->GetToken();
+        if (msg) *msg = "the type of operand should be boolean type in this operation."
+        return false;
+      }
+      break;
+    default:
+      if (t) *t = lhs->GetToken();
+      if (msg) *msg = "the operation is not valid.";
+      return false;a
+  }
+
   return true;
 }
 
