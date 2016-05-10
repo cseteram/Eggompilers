@@ -167,6 +167,23 @@ bool CAstScope::TypeCheck(CToken *t, string *msg) const
 {
   bool result = true;
 
+  try {
+    CAstStatement *st = _statseq;
+    while (result && st) {
+      result = st->TypeCheck(t, msg);
+      st = st->GetNext();
+    }
+
+    size_t size = GetNumChildren();
+    for (size_t i = 0; i < size; i++) {
+      CAstScope *child = GetChild(i);
+      result = child->TypeCheck(t, msg);
+    }
+  }
+  catch (...) {
+    result = false;
+  }
+
   return result;
 }
 
@@ -494,6 +511,32 @@ CAstExpression* CAstStatReturn::GetExpression(void) const
 
 bool CAstStatReturn::TypeCheck(CToken *t, string *msg) const
 {
+  const CType *st = GetScope()->GetType();
+  CAstExpression *e = GetExpression();
+
+  if (st->Match(CTypeManager::Get()->GetNull()) {
+    if (e) {
+      if (t) *t = e->GetToken();
+      if (msg) *mst = "procedure has no return value/expression.";
+      return false;
+    }
+  }
+
+  if (!e) {
+    if (t) *t = GetToken();
+    if (msg) *msg = "fuction should have return value/expression.";
+    return false;
+  }
+
+  if (!e->TypeCheck(t, msg))
+    return false;
+
+  if (!st->Match(e->GetType())) {
+    if (t) *t = e->GetToken();
+    if (msg) *msg = "return type mismatch.";
+    return false;
+  }
+
   return true;
 }
 
