@@ -11,5 +11,6 @@ end f;
 
 begin
   f(a,3,5);
-  WriteInt(a[2][2])
+  WriteInt(a[2][2]);
+  return
 end simple00.

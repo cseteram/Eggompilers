@@ -406,13 +406,13 @@ bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
   if (!rhs->TypeCheck(t, msg))
     return false;
 
-  if (!lhs->GetType()->IsScalar()) {
+  if (!lhs->GetType() || !lhs->GetType()->IsScalar()) {
     if (t) *t = lhs->GetToken();
     if (msg) *msg = "invalid variable type.";
     return false;
   }
 
-  if (!rhs->GetType()->IsScalar()) {
+  if (!rhs->GetType() || !rhs->GetType()->IsScalar()) {
     if (t) *t = rhs->GetToken();
     if (msg) *msg = "invalid value type.";
     return false;
@@ -550,20 +550,21 @@ bool CAstStatReturn::TypeCheck(CToken *t, string *msg) const
       return false;
     }
   }
+  else {
+    if (!e) {
+      if (t) *t = GetToken();
+      if (msg) *msg = "fuction should have return value/expression.";
+      return false;
+    }
 
-  if (!e) {
-    if (t) *t = GetToken();
-    if (msg) *msg = "fuction should have return value/expression.";
-    return false;
-  }
+    if (!e->TypeCheck(t, msg))
+      return false;
 
-  if (!e->TypeCheck(t, msg))
-    return false;
-
-  if (!st->Match(e->GetType())) {
-    if (t) *t = e->GetToken();
-    if (msg) *msg = "return type mismatch.";
-    return false;
+    if (!st->Match(e->GetType())) {
+      if (t) *t = e->GetToken();
+      if (msg) *msg = "return type mismatch.";
+      return false;
+    }
   }
 
   return true;
@@ -655,7 +656,7 @@ bool CAstStatIf::TypeCheck(CToken *t, string *msg) const
   if (!cond->TypeCheck(t, msg))
     return false;
 
-  if (!cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
+  if (!cond->GetType() || !cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
     if (t) *t = cond->GetToken();
     if (msg) *msg = "condition should be bool type.";
     return false;
@@ -672,14 +673,6 @@ bool CAstStatIf::TypeCheck(CToken *t, string *msg) const
       return false;
     elseBody = elseBody->GetNext();
   }
-
-  /*
-  if (!ifBody->TypeCheck(t, msg))
-    return false;
-
-  if (!elseBody->TypeCheck(t, msg))
-    return false;
-  */
 
   return true;
 }
@@ -787,7 +780,7 @@ bool CAstStatWhile::TypeCheck(CToken *t, string *msg) const
   if (!cond->TypeCheck(t, msg))
     return false;
 
-  if (!cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
+  if (!cond->GetType() || !cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
     if (t) *t = cond->GetToken();
     if (msg) *msg = "condition should be a bool type.";
     return false;
@@ -798,10 +791,6 @@ bool CAstStatWhile::TypeCheck(CToken *t, string *msg) const
       return false;
     body = body->GetNext();
   }
-  /*
-  if (!body->TypeCheck(t, msg))
-    return false;
-  */
 
   return true;
 }
@@ -934,12 +923,12 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   
   // binary operation requires that both left type and right type are scalar type
   const CType *lt = lhs->GetType(), *rt = rhs->GetType();
-  if (!lt->IsScalar()) {
+  if (lt == NULL || !lt->IsScalar()) {
     if (t) *t = lhs->GetToken();
     if (msg) *msg = "the type of LHS is not scalar type";
     return false;
   }
-  if (!rt->IsScalar()) {
+  if (rt == NULL || !rt->IsScalar()) {
     if (t) *t = rhs->GetToken();
     if (msg) *msg = "the type of RHS is not scalar type";
     return false;
@@ -1059,7 +1048,6 @@ const CType* CAstBinaryOp::GetType(void) const
   }
 
   return ret;
-  // return CTypeManager::Get()->GetInt();
 }
 
 ostream& CAstBinaryOp::print(ostream &out, int indent) const
@@ -1129,28 +1117,31 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
 {
   CAstExpression *operand = GetOperand();
   EOperation oper = GetOperation();
-  CTypeManager *tm = CTypeManager()::Get();
+  CTypeManager *tm = CTypeManager::Get();
+
+  if (!operand->TypeCheck(t,msg)) 
+    return false;
 
   switch (oper) {
     case opNeg:
     case opPos:
-      if (!operand->GetType()->Match(tm->GetInt())) {
+      if (!operand->GetType() || !operand->GetType()->Match(tm->GetInt())) {
         if (t) *t = operand->GetToken();
-        if (msg) *msg = "the type of operand should be int type in this operation."
+        if (msg) *msg = "the type of operand should be int type in this operation.";
         return false;
       }
       break;
     case opNot:
-      if (!operand->GetType()->Match(tm->GetBool())) {
+      if (!operand->GetType() || !operand->GetType()->Match(tm->GetBool())) {
         if (t) *t = operand->GetToken();
-        if (msg) *msg = "the type of operand should be boolean type in this operation."
+        if (msg) *msg = "the type of operand should be boolean type in this operation.";
         return false;
       }
       break;
     default:
-      if (t) *t = lhs->GetToken();
+      if (t) *t = GetToken();
       if (msg) *msg = "the operation is not valid.";
-      return false;a
+      return false;
   }
 
   return true;
@@ -1242,7 +1233,20 @@ CAstExpression* CAstSpecialOp::GetOperand(void) const
 
 bool CAstSpecialOp::TypeCheck(CToken *t, string *msg) const
 {
-  return false;
+  EOperation oper = GetOperation();
+
+  if (!_operand->TypeCheck(t, msg))
+    return false;
+
+  if (oper == opDeref) {
+    if (!_operand->GetType() || !_operand->GetType()->IsPointer()) {
+      if (t) *t = _operand->GetToken();
+      if (msg) *msg = "the dereference of non-pointer type is not allowed.";
+      return false;
+    }
+  }
+
+  return true;
 }
 
 const CType* CAstSpecialOp::GetType(void) const
