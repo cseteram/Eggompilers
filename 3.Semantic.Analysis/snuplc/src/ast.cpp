@@ -395,6 +395,33 @@ CAstExpression* CAstStatAssign::GetRHS(void) const
 
 bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
 {
+  CAstDesignator *lhs = GetLHS();
+  CAstExpression *rhs = GetRHS();
+
+  if (!lhs->TypeCheck(t, msg))
+    return false;
+
+  if (!rhs->TypeCheck(t, msg))
+    return false;
+
+  if (!lhs->GetType()->IsScalar()) {
+    if (t) *t = lhs->GetToken();
+    if (msg) *msg = "invalid variable type.";
+    return false;
+  }
+
+  if (!rhs->GetType()->IsScalar()) {
+    if (t) *t = rhs->GetToken();
+    if (msg) *msg = "invalid value type.";
+    return false;
+  }
+
+  if (!lhs->GetType()->Match(rhs->GetType())) {
+    if (t) *t = lhs->GetToken();
+    if (msg) *msg = "assign type mismatch.";
+    return false;
+  }
+
   return true;
 }
 
@@ -619,6 +646,25 @@ CAstStatement* CAstStatIf::GetElseBody(void) const
 
 bool CAstStatIf::TypeCheck(CToken *t, string *msg) const
 {
+  CAstExpression *cond = GetCondition();
+  CAstStatement *ifBody = GetIfBody();
+  CAstStatement *elseBody = GetElseBody();
+
+  if (!cond->TypeCheck(t, msg))
+    return false;
+
+  if (!cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
+    if (t) *t = cond->GetToken();
+    if (msg) *msg = "condition should be bool type.";
+    return false;
+  }
+
+  if (!ifBody->TypeCheck(t, msg))
+    return false;
+
+  if (!elseBody->TypeCheck(t, msg))
+    return false;
+
   return true;
 }
 
@@ -719,6 +765,21 @@ CAstStatement* CAstStatWhile::GetBody(void) const
 
 bool CAstStatWhile::TypeCheck(CToken *t, string *msg) const
 {
+  CAstExpression *cond = GetCondition();
+  CAstStatement *body = GetBody();
+
+  if (!cond->TypeCheck(t, msg))
+    return false;
+
+  if (!cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
+    if (t) *t = cond->GetToken();
+    if (msg) *msg = "condition should be a bool type.";
+    return false;
+  }
+
+  if (!body->TypeCheck(t, msg))
+    return false;
+
   return true;
 }
 
@@ -846,7 +907,7 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
 
 const CType* CAstBinaryOp::GetType(void) const
 {
-  const CType* ret;
+  const CType *ret;
   EOperation oper = GetOperation();
 
   switch (oper) {
