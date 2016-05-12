@@ -429,13 +429,8 @@ bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
     if (t) *t = lhs->GetToken();
     if (msg) {
       out << "assign type mismatch." << endl;
-      out << "LHS : ";
-      if (lhs->GetType() == NULL) out << "<INVALID>" << endl;
-      else out << lhs->GetType() << endl;
-      out << "RHS : ";
-      if (rhs->GetType() == NULL) out << "<INVALID>" << endl;
-      else out << rhs->GetType() << endl;
-
+      out << "LHS : " << lhs->GetType() << endl;
+      out << "RHS : " << rhs->GetType() << endl;
       *msg = out.str();
     }
     return false;
@@ -604,11 +599,10 @@ const CType* CAstStatReturn::GetType(void) const
 {
   const CType *t = NULL;
 
-  if (GetExpression() != NULL) {
+  if (GetExpression() != NULL)
     t = GetExpression()->GetType();
-  } else {
+  else
     t = CTypeManager::Get()->GetNull();
-  }
 
   return t;
 }
@@ -967,8 +961,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     if (msg) {
       out << "the type of LHS is not scalar type." << endl;
       out << "LHS : ";
-      if (lt == NULL) out << "<INVALID>" << endl;
-      else out << lt << endl;
+      if (lt) out << lt << endl;
+      else out << "<INVALID>" << endl;
       *msg = out.str();
     }
     return false;
@@ -978,8 +972,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     if (msg) {
       out << "the type of RHS is not scalar type." << endl;
       out << "RHS : ";
-      if (rt == NULL) out << "<INVALID>" << endl;
-      else out << rt << endl;
+      if (rt) out << rt << endl;
+      else out << "<INVALID>" << endl;
       *msg = out.str();
     }
     return false;
@@ -1004,7 +998,7 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   if (!lt->Match(rt)) {
     if (t) *t = GetToken();
     if (msg) {
-      out << "the type of LHS does not match with the types of RHS." << endl;
+      out << "the type of LHS does not match with the type of RHS." << endl;
       out << "LHS : " << lt << endl;
       out << "RHS : " << rt << endl;
       *msg = out.str();
@@ -1020,16 +1014,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
       if (!lt->Match(tm->GetInt())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
-          out << "the type of LHS should has int type in this operation." << endl;
+          out << "the type of operands should be an integer type in this operation." << endl;
           out << "LHS : " << lt << endl;
-          *msg = out.str();
-        }
-        return false;
-      }
-      if (!rt->Match(tm->GetInt())) {
-        if (t) *t = rhs->GetToken();
-        if (msg) {
-          out << "the type of RHS should has int type in this operation." << endl;
           out << "RHS : " << rt << endl;
           *msg = out.str();
         }
@@ -1041,16 +1027,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
       if (!lt->Match(tm->GetBool())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
-          out << "the type of LHS should has boolean type in this operation." << endl;
+          out << "the type of operands should be an boolean type in this operation." << endl;
           out << "LHS : " << lt << endl;
-          *msg = out.str();
-        }
-        return false;
-      }
-      if (!rt->Match(tm->GetBool())) {
-        if (t) *t = rhs->GetToken();
-        if (msg) {
-          out << "the type of RHS should has boolean type in this operation." << endl;
           out << "RHS : " << rt << endl;
           *msg = out.str();
         }
@@ -1068,15 +1046,7 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
       if (lt->Match(tm->GetBool())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
-          out << "the type of LHS cannot be boolean type in this operation." << endl;
-          *msg = out.str();
-        }
-        return false;
-      }
-      if (rt->Match(tm->GetBool())) {
-        if (t) *t = rhs->GetToken();
-        if (msg) {
-          out << "the type of RHS cannot be boolean type in this operation." << endl;
+          out << "the type of operands cannot be boolean type in this operation." << endl;
           *msg = out.str();
         }
         return false;
@@ -1131,9 +1101,8 @@ ostream& CAstBinaryOp::print(ostream &out, int indent) const
   out << ind << GetOperation() << " ";
 
   const CType *t = GetType();
-  if (t != NULL) out << t; else out << "<INVALID>";
-
-  out << endl;
+  if (t != NULL) out << t << endl;
+  else out << "<INVALID>" << endl;
 
   _left->print(out, indent+2);
   _right->print(out, indent+2);
@@ -1203,10 +1172,10 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
       if (!operand->GetType() || !operand->GetType()->Match(tm->GetInt())) {
         if (t) *t = operand->GetToken();
         if (msg) {
-          out << "the type of operand should be int type in this operation." << endl;
+          out << "the type of operand should be an integer type in this operation." << endl;
           out << "operand : ";
-          if (operand->GetType() == NULL) out << "<INVALID>" << endl;
-          else out << operand->GetType() << endl;
+          if (operand->GetType()) out << operand->GetType() << endl;
+          else out << "<INVALID>" << endl;
           *msg = out.str();
         }
         return false;
@@ -1216,10 +1185,10 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
       if (!operand->GetType() || !operand->GetType()->Match(tm->GetBool())) {
         if (t) *t = operand->GetToken();
         if (msg) {
-          out << "the type of operand should be boolean type in this operation." << endl;
+          out << "the type of operand should be a boolean type in this operation." << endl;
           out << "operand : ";
-          if (operand->GetType() == NULL) out << "<INVALID>" << endl;
-          else out << operand->GetType() << endl;
+          if (operand->GetType()) out << operand->GetType() << endl;
+          else out << "<INVALID>" << endl;
           *msg = out.str();
         }
         return false;
@@ -1256,7 +1225,6 @@ const CType* CAstUnaryOp::GetType(void) const
   }
 
   return ret;
-  // return CTypeManager::Get()->GetInt();
 }
 
 ostream& CAstUnaryOp::print(ostream &out, int indent) const
@@ -1334,8 +1302,8 @@ bool CAstSpecialOp::TypeCheck(CToken *t, string *msg) const
       if (t) *t = _operand->GetToken();
       if (msg) {
         out << "the dereference of non-pointer type (";
-        if (_operand->GetType() == NULL) out << "<INVALID>";
-        else out << _operand->GetType();
+        if (_operand->GetType()) out << _operand->GetType();
+        else out << "<INVALID>";
         out << ") is not allowed." << endl;
         *msg = out.str();
       }
@@ -1370,7 +1338,6 @@ const CType* CAstSpecialOp::GetType(void) const
   }
   
   return ret;
-  // return NULL;
 }
 
 ostream& CAstSpecialOp::print(ostream &out, int indent) const
@@ -1460,21 +1427,22 @@ bool CAstFunctionCall::TypeCheck(CToken *t, string *msg) const
 
   for (int i = 0; i < GetNArgs(); i++) {
     CAstExpression *expr = GetArg(i);
-    const CType* paramType = proc->GetParam(i)->GetDataType();
+    const CType *paramType = proc->GetParam(i)->GetDataType();
+
     if (!expr->TypeCheck(t,msg))
       return false;
 
-    if (!expr->GetType() || !paramType || !expr->GetType()->Match(paramType)) {
+    if (!expr->GetType() || !expr->GetType()->Match(paramType)) {
       if (t) *t = expr->GetToken();
       if (msg) {
         out << "the type of parameters does not match "
-            "with the function/procedure's signature" << endl;
+               "with the function/procedure's signature." << endl;
         out << "signature : ";
-        if (paramType == NULL) out << "<INVALID>" << endl;
-        else out << paramType << endl;
+        if (paramType) out << paramType << endl;
+        else out << "<INVALID>" << endl;
         out << "subroutineCall : ";
-        if (expr->GetType() == NULL) out << "<INVALID>" << endl;
-        else out << expr->GetType() << endl;
+        if (expr->GetType()) out << expr->GetType() << endl;
+        else out << "<INVALID>" << endl;
         *msg = out.str();
       }
       return false;
@@ -1562,7 +1530,7 @@ const CSymbol* CAstDesignator::GetSymbol(void) const
 
 bool CAstDesignator::TypeCheck(CToken *t, string *msg) const
 {
-  if (GetType() == NULL) {
+  if (GetType() == NULL || GetType()->IsNull()) {
     if (t) *t = GetToken();
     if (msg) *msg = "invalid designator type.";
     return false;
@@ -1583,9 +1551,8 @@ ostream& CAstDesignator::print(ostream &out, int indent) const
   out << ind << _symbol << " ";
 
   const CType *t = GetType();
-  if (t != NULL) out << t; else out << "<INVALID>";
-
-  out << endl;
+  if (t) out << t << endl;
+  else out << "<INVALID>" << endl;
 
   return out;
 }
@@ -1665,8 +1632,8 @@ bool CAstArrayDesignator::TypeCheck(CToken *t, string *msg) const
       if (msg) {
         out << "the element in array should be accessed by integer index." << endl;
         out << "but the expression's type is ";
-        if (expr->GetType() == NULL) out << "<INVALID>" << endl;
-        else out << expr->GetType() << endl;
+        if (expr->GetType()) out << expr->GetType() << endl;
+        else out << "<INVALID>" << endl;
         *msg = out.str();
       }
       return false;
@@ -1680,6 +1647,7 @@ const CType* CAstArrayDesignator::GetType(void) const
 {
   const CType *symbolType = GetSymbol()->GetDataType();
 
+  // implicit dereferncing pointer to array
   if (symbolType->IsPointer())
     symbolType = dynamic_cast<const CPointerType*>(symbolType)->GetBaseType();
 
@@ -1773,18 +1741,17 @@ string CAstConstant::GetValueStr(void) const
 {
   ostringstream out;
 
-  if (GetType() == CTypeManager::Get()->GetBool()) {
+  if (GetType() == CTypeManager::Get()->GetBool())
     out << (_value == 0 ? "false" : "true");
-  } else {
+  else
     out << dec << _value;
-  }
 
   return out.str();
 }
 
 bool CAstConstant::TypeCheck(CToken *t, string *msg) const
 {
-  if (_type == NULL) {
+  if (_type == NULL || _type->IsNull()) {
     if (t) *t = GetToken();
     if (msg) *msg = "invalid constant type.";
     return false;
@@ -1805,9 +1772,8 @@ ostream& CAstConstant::print(ostream &out, int indent) const
   out << ind << GetValueStr() << " ";
 
   const CType *t = GetType();
-  if (t != NULL) out << t; else out << "<INVALID>";
-
-  out << endl;
+  if (t) out << t << endl;
+  else out << "<INVALID>" << endl;
 
   return out;
 }
@@ -1866,7 +1832,7 @@ const string CAstStringConstant::GetValueStr(void) const
 
 bool CAstStringConstant::TypeCheck(CToken *t, string *msg) const
 {
-  if (_type == NULL) {
+  if (_type == NULL || _type->IsNull()) {
     if (t) *t = GetToken();
     if (msg) *msg = "invalid string constant type.";
     return false;
@@ -1877,9 +1843,6 @@ bool CAstStringConstant::TypeCheck(CToken *t, string *msg) const
 
 const CType* CAstStringConstant::GetType(void) const
 {
-  // CTypeManager *tm = CTypeManager::Get();
-  // return tm->GetPointer(tm->GetArray(GetValueStr().size() + 1, tm->GetChar()));
-
   return _type;
 }
 
@@ -1890,9 +1853,8 @@ ostream& CAstStringConstant::print(ostream &out, int indent) const
   out << ind << '"' << GetValueStr() << '"' << " ";
 
   const CType *t = GetType();
-  if (t != NULL) out << t; else out << "<INVALID>";
-
-  out << endl;
+  if (t) out << t << endl;
+  else out << "<INVALID>" << endl;
 
   return out;
 }
@@ -1916,5 +1878,4 @@ CTacAddr* CAstStringConstant::ToTac(CCodeBlock *cb,
 {
   return NULL;
 }
-
 
