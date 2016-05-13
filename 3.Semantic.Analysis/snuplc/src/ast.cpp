@@ -1194,8 +1194,12 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
   EOperation oper = GetOperation();
   CTypeManager *tm = CTypeManager::Get();
 
-  if (!operand->TypeCheck(t,msg)) 
+  if (!operand->TypeCheck(t,msg)) {
+    CAstConstant *number = dynamic_cast<CAstConstant*> (operand);
+    if (number != NULL && oper == opNeg)
+      return true;
     return false;
+  }
 
   switch (oper) {
     case opNeg:
@@ -1784,9 +1788,20 @@ string CAstConstant::GetValueStr(void) const
 
 bool CAstConstant::TypeCheck(CToken *t, string *msg) const
 {
+  ostringstream out;
+
   if (_type == NULL) {
     if (t) *t = GetToken();
     if (msg) *msg = "invalid constant type.";
+    return false;
+  }
+
+  if (GetValue() == (1LL << 31)) {
+    if (t) *t = GetToken();
+    if (msg) {
+      out << "invalid number. (" << GetValue() << ")" << endl;
+      *msg = out.str();
+    }
     return false;
   }
 
