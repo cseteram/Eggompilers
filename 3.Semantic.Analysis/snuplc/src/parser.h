@@ -110,6 +110,19 @@ class CParser {
     ///        cannot be NULL. so use empty vector if necessary
     void                  varDecl(vector<string> &vars, CAstType* &ttype, vector<string> &allVars);
 
+    /// @brief store all parameter's information to create/add symbols to symbol table
+    /// @param vars the set of parameter's name (which is appeared) is stored 'vars'
+    /// @param ttype the parameter's type is stored 'ttype'
+    /// @param allVars already declared variables in this scope.
+    ///        cannot be NULL. so use empty vector if necessary
+    void                  varDeclParam(vector<string> &vars, CAstType* &ttype, vector<string> &allVars);
+
+    /// @brief store all variable's information to create/add symbols to symbol table
+    /// @param vars the set of variable's name (which is appeared) is stored 'vars'
+    /// @param allVars already declared variables in this scope.
+    ///        cannot be NULL. so use empty vector if necessary
+    void                  varDeclInternal(vector<string> &vars, vector<string> &allVars);
+
     /// @brief build up AST procedure scope by procedure declaration
     /// @param s AST scope node which is parent of this procedure scope
     /// @retval CAstProcedure which is created by procedure
@@ -198,8 +211,9 @@ class CParser {
     CAstExpression*       factor(CAstScope *s);
 
     /// @brief build up AST type node by given type
+    /// @param isParam decide between variables and parameters
     /// @retval CAstType which represents this type value
-    CAstType*             type(void);
+    CAstType*             type(bool isParam);
 
     /// @brief build up AST designator node by qualident
     /// @param s AST scope node which owns this qualident

@@ -260,6 +260,32 @@ void CParser::varDecl(vector<string> &vars, CAstType* &ttype, vector<string> &al
   //
   // varDecl ::= ident { "," ident } ":" type.
   //
+
+  // vardecl -> ident { "," ident } ":" ...
+  varDeclInternal(vars, allVars);
+
+  // varDecl -> ... type
+  ttype = type(false);
+}
+
+void CParser::varDeclParam(vector<string> &vars, CAstType* &ttype, vector<string> &allVars)
+{
+  //
+  // varDecl ::= ident { "," ident } ":" type.
+  //
+
+  // vardecl -> ident { "," ident } ":" ...
+  varDeclInternal(vars, allVars);
+
+  // varDecl -> ... type
+  ttype = type(true);
+}
+
+void CParser::varDeclInternal(vector<string> &vars, vector<string> &allVars)
+{
+  //
+  // varDecl ::= ident { "," ident } ":" type.
+  //
   
   while (!_abort) {
     // varDecl -> ident ...
@@ -287,7 +313,6 @@ void CParser::varDecl(vector<string> &vars, CAstType* &ttype, vector<string> &al
 
   // varDecl -> ... ":" type
   Consume(tColon);
-  ttype = type();
 }
 
 CAstProcedure* CParser::procedureDecl(CAstScope *s)
@@ -376,7 +401,9 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
 
   // functionDecl -> ... ":" type ";"
   Consume(tColon);
-  returnType = type();
+  returnType = type(false);
+  if (returnType->GetType()->IsArray())
+    SetError(returnType->GetToken(), "function cannot return array type.");
   Consume(tSemicolon);
   
   CSymProc *symbol = new CSymProc(functionName, returnType->GetType()); 
@@ -847,7 +874,7 @@ CAstExpression* CParser::factor(CAstScope *s)
   return n;
 }
 
-CAstType* CParser::type(void)
+CAstType* CParser::type(bool isParam)
 {
   //
   // type ::= basetype | type "[" [ number ] "]".
@@ -878,10 +905,18 @@ CAstType* CParser::type(void)
     Consume(tLBrak);
 
     // type -> ... number ...
-    if (_scanner->Peek().GetType() != tRBrak)
-      index.push_back(number()->GetValue());
-    else
+    if (_scanner->Peek().GetType() != tRBrak) {
+      long long indexSize = number()->GetValue();
+
+      if (indexSize < 0 || indexSize >= (1 << 31))
+        SetError(t, "array out of index : " + indexSize);
+      else
+        index.push_back(number()->GetValue());
+    }
+    else if (isParam)
       index.push_back(CArrayType::OPEN);
+    else
+      SetError(t, "open index when declare array variable is not allowed.");
 
     // type -> ... "]"
     Consume(tRBrak);
@@ -889,7 +924,7 @@ CAstType* CParser::type(void)
       break;
   }
 
-  // type -> ... "[" "]"
+  // construct array type
   if (!index.empty()) {
     const CType* innertype = ttype;
     for(int i = (int) index.size() - 1; i >= 0; i--)
