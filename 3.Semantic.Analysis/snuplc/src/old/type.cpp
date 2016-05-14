@@ -168,26 +168,17 @@ bool CPointerType::Match(const CType *t) const
   const CPointerType *pt = dynamic_cast<const CPointerType*>(t);
   assert(pt != NULL);
 
-  // match if:
-  // - this is a void pointer or
-  // - the types are compatible with respect to Match()
-  return GetBaseType()->IsNull() ||
+  // void pointers are compatible with any other pointer. If none of the
+  // pointers is a void pointer, compare the base types.
+  /*
+  bool b = GetBaseType()->IsNull() || pt->GetBaseType()->IsNull() ||
+           GetBaseType()->Match(pt->GetBaseType());
+  cout << "CPointerType::Match: "
+       << GetBaseType() << "  <-->  " << pt->GetBaseType() << "  =  " << b
+       << endl;
+  */
+  return GetBaseType()->IsNull() || pt->GetBaseType()->IsNull() ||
          GetBaseType()->Match(pt->GetBaseType());
-}
-
-bool CPointerType::Compare(const CType *t) const
-{
-  // check whether t is a pointer
-  if ((t == NULL) || !t->IsPointer()) return false;
-
-  const CPointerType *pt = dynamic_cast<const CPointerType*>(t);
-  assert(pt != NULL);
-
-  // comparison: match if
-  // - this is a void pointer or
-  // - the types are compatible with respect to Compare()
-  return GetBaseType()->IsNull() ||
-         GetBaseType()->Compare(pt->GetBaseType());
 }
 
 ostream& CPointerType::print(ostream &out, int indent) const
@@ -255,12 +246,9 @@ bool CArrayType::Match(const CType *t) const
   if (t->IsArray()) {
     const CArrayType *at = dynamic_cast<const CArrayType*>(t);
     assert(at != NULL);
-
-    // match if:
-    // - (this is an open array or the number of elements match) and
-    // - the inner types are compatible with respect to Match()
     return ((GetNElem() == at->GetNElem()) ||
-            (GetNElem() == OPEN)) &&
+            (GetNElem() == OPEN) ||
+            (at->GetNElem() == OPEN)) &&
            (GetInnerType()->Match(at->GetInnerType()));
   } else {
     return false;
@@ -272,10 +260,6 @@ bool CArrayType::Compare(const CType *t) const
   if (t->IsArray()) {
     const CArrayType *at = dynamic_cast<const CArrayType*>(t);
     assert(at != NULL);
-
-    // comparison: match if
-    // - the number of elements match and
-    // - the inner types are compatible with respect to Compare()
     return ((GetNElem() == at->GetNElem()) &&
             GetInnerType()->Compare(at->GetInnerType()));
   } else {
@@ -290,7 +274,7 @@ ostream& CArrayType::print(ostream &out, int indent) const
 
   out << ind << "<array ";
   if (n != OPEN) out << n << " ";
-  out << "of "; GetInnerType()->print(out);
+  out << " of "; GetInnerType()->print(out);
   //out << "," << GetSize() << "," << GetAlign();
   out << ">";
   return out;
@@ -358,7 +342,7 @@ const CPointerType* CTypeManager::GetVoidPtr(void) const
 const CPointerType* CTypeManager::GetPointer(const CType *basetype)
 {
   for (size_t i=0; i<_ptr.size(); i++) {
-    if ((_ptr[i]->GetBaseType()->Compare(basetype))) {
+    if ((_ptr[i]->GetBaseType()->Match(basetype))) {
       return _ptr[i];
     }
   }
