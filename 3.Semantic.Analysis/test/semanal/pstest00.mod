@@ -31,16 +31,6 @@ begin
     return
 end input;
 
-function pos(index : integer ; arr : integer[][]) : boolean;
-var x : integer;
-begin
-    x := mod(index, n * m);
-    if (arr[div(x,m)][mod(x,m)] = 0) then
-        return false
-    end;
-    return true
-end pos;
-
 function div(value : integer ; q : integer) : integer;
 begin
     return value / q
@@ -51,12 +41,22 @@ begin
     return value - value / q * q
 end mod;
 
+function pos(index : integer ; arr : integer[][]) : boolean;
+var x : integer;
+begin
+    x := mod(index, n * m);
+    if (arr[div(x,m)][mod(x,m)] = 0) then
+        return false
+    end;
+    return true
+end pos;
+
 procedure process();
 var i : integer;
 begin
     i := 0;
 
-    while (pos(a[i], b) && i < n*m) do
+    while (pos(a[i], b) && (i < n*m)) do
         sum := sum + a[i];
         i := i+1
     end
