@@ -908,12 +908,12 @@ CAstType* CParser::type(bool isParam)
       long long indexSize = number()->GetValue();
 
       if (indexSize < 0 || indexSize >= (1LL << 31))
-        SetError(t, "declaring array out of index : " + indexSize);
+        SetError(t, "invalid array size: " + indexSize);
       else
         index.push_back(indexSize);
     }
     else if (!isParam)
-      SetError(t, "open index when declare array variable is not allowed.");
+      SetError(t, "open array is not allowed unless it is a parameter.");
     else
       index.push_back(CArrayType::OPEN);
 
