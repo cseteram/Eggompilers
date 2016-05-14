@@ -432,7 +432,7 @@ void CParser::formalParam
     do {
       vector<string> l;
       CAstType *ttype;
-      varDecl(l, ttype, paramNames);
+      varDeclParam(l, ttype, paramNames);
 
       for (int i = 0; i < (int) l.size() ; i++) {
         if (ttype->GetType()->IsArray()) {
@@ -899,8 +899,7 @@ CAstType* CParser::type(bool isParam)
   else
     SetError(t, "invalid base type: " + t.GetValue());
 
-  CToken tt = _scanner->Peek();
-  while (tt.GetType() == tLBrak) {
+  while (_scanner->Peek().GetType() == tLBrak) {
     // type -> ... "[" ...
     Consume(tLBrak);
 
@@ -908,20 +907,16 @@ CAstType* CParser::type(bool isParam)
     if (_scanner->Peek().GetType() != tRBrak) {
       long long indexSize = number()->GetValue();
 
-      if (indexSize < 0 || indexSize >= (1 << 31))
-        SetError(t, "array out of index : " + indexSize);
+      if (indexSize < 0 || indexSize >= (1LL << 31))
+        SetError(t, "declaring array out of index : " + indexSize);
       else
-        index.push_back(number()->GetValue());
+        index.push_back(indexSize);
     }
-    else if (isParam)
-      index.push_back(CArrayType::OPEN);
-    else
+    else if (!isParam)
       SetError(t, "open index when declare array variable is not allowed.");
 
     // type -> ... "]"
     Consume(tRBrak);
-    if (_scanner->Peek().GetType() != tLBrak)
-      break;
   }
 
   // construct array type
