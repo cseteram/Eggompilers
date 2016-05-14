@@ -914,6 +914,9 @@ CAstType* CParser::type(bool isParam)
     }
     else if (!isParam)
       SetError(t, "open index when declare array variable is not allowed.");
+    else
+      index.push_back(CArrayType::OPEN);
+
 
     // type -> ... "]"
     Consume(tRBrak);
