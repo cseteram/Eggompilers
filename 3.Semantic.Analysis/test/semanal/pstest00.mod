@@ -6,16 +6,39 @@ module pstest00;
 
 var a : integer[111111];
     b : integer[1111][1111];
-    sum : integer;
+    n, m, sum : integer;
 
 procedure input;
+var i, j : integer;
 begin
+    n := ReadInt(); m := ReadInt();
+    i := 0; j := 0;
 
+    while (i < n*m) do 
+        a[i] := ReadInt();
+        i := i+1
+    end;
+    
+    i := 0;
+    while (i < n) do
+        while (j < m) do
+            b[i][j] := ReadInt();
+            j := j+1
+        end;
+        i := i+1
+    end;
+
+    return
 end input;
 
 function pos(index : integer ; arr : integer[][]) : boolean;
+var x : integer;
 begin
-    // TODO
+    x := mod(index, n * m);
+    if (arr[div(x,m)][mod(x,m)] = 0) then
+        return false
+    end;
+    return true
 end pos;
 
 function div(value : integer ; q : integer) : integer;
@@ -29,13 +52,20 @@ begin
 end mod;
 
 procedure process();
+var i : integer;
 begin
-    // TODO
+    i := 0;
+
+    while (pos(a[i], b) && i < n*m) do
+        sum := sum + a[i];
+        i := i+1
+    end
+
 end process;
 
 procedure output();
 begin
-    // TODO
+    WriteInt(sum)
 end output;
 
 begin
