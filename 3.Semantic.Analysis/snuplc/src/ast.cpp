@@ -1436,7 +1436,8 @@ bool CAstFunctionCall::TypeCheck(CToken *t, string *msg) const
     if (!expr->TypeCheck(t,msg))
       return false;
 
-    if (!expr->GetType() || !expr->GetType()->Match(paramType)) {
+    if (!expr->GetType() || !paramType || 
+        !paramType->Match(expr->GetType())) {
       if (t) *t = expr->GetToken();
       if (msg) {
         out << "the type of parameters does not match "
@@ -1755,6 +1756,8 @@ string CAstConstant::GetValueStr(void) const
 
 bool CAstConstant::TypeCheck(CToken *t, string *msg) const
 {
+  ostringstream out;
+
   if (_type == NULL || _type->IsNull()) {
     if (t) *t = GetToken();
     if (msg) *msg = "invalid constant type.";
