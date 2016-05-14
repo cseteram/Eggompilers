@@ -198,8 +198,11 @@ CAstModule* CParser::module(void)
 
     // subroutineDecl -> ... ident ";".
     CToken t = _scanner->Peek();
-    if (t.GetType() != tIdent || t.GetValue() != sub->GetName())
-      SetError(t, "subroutine identifier not matched");
+    if (t.GetType() != tIdent || t.GetValue() != sub->GetName()) {
+      string msg = "subroutine identifier mismatched (\"" + sub->GetName()
+                    + "\" != \"" + t.GetValue() + "\")";
+      SetError(t, msg);
+    }
     Consume(tIdent);
     Consume(tSemicolon);
 
@@ -214,8 +217,11 @@ CAstModule* CParser::module(void)
 
   // module -> ... ident "."
   CToken tModuleIdentClose = _scanner->Get();
-  if (tModuleIdent.GetValue() != tModuleIdentClose.GetValue())
-    SetError(tModuleIdentClose, "module identifier not matched");
+  if (tModuleIdent.GetValue() != tModuleIdentClose.GetValue()) {
+    string msg = "module identifier not matched (\"" + tModuleIdent.GetValue()
+                + "\" != \"" + tModuleIdentClose.GetValue() + "\")";
+    SetError(tModuleIdentClose, msg);
+  }
   Consume(tDot);
 
   return m;
@@ -1002,11 +1008,11 @@ CAstConstant* CParser::number(void)
 
   errno = 0;
   long long v = strtoll(t.GetValue().c_str(), NULL, 10);
-  if (errno != 0) SetError(t, "invalid number.");
+  if (errno != 0) SetError(t, "invalid number. (" + t.GetValue() + ")");
 
   long long absv = (v > 0 ? v : (-v));
-  if (absv > (1LL << 31)) SetError(t, "invalid number.");
-  // INT_MAX + 1 will be handled when phase 3 : type checking
+  if (absv > (1LL << 31)) SetError(t, "invalid number. (" + t.GetValue() + ")");
+  // INT_MAX + 1 is handled by TypeCheck
 
   return new CAstConstant(t, CTypeManager::Get()->GetInt(), v);
 }
