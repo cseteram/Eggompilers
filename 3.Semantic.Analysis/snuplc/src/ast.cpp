@@ -1018,16 +1018,12 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
-  string soper;
+  string soper; // TODO : match string operation.
   switch (oper) {
     case opAdd:
-      soper = "+";
     case opSub:
-      soper = "-";
     case opMul:
-      soper = "*";
     case opDiv:
-      soper = "/";
       if (!lt->Match(tm->GetInt())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
@@ -1041,9 +1037,7 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
       }
       break;
     case opAnd:
-      soper = "&&";
     case opOr:
-      soper = "||";
       if (!lt->Match(tm->GetBool())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
@@ -1057,19 +1051,13 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
       }
       break;
     case opEqual:
-      soper = "=";
     case opNotEqual:
-      soper = "#";
       // when operation is '=' or '#'
       break;
     case opLessThan:
-      soper = "<";
     case opLessEqual:
-      soper = "<=";
     case opBiggerThan:
-      soper = ">";
     case opBiggerEqual:
-      soper = ">=";
       if (lt->Match(tm->GetBool())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
@@ -1198,12 +1186,10 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
-  string soper;
+  string soper; // TODO : match string operation.
   switch (oper) {
     case opNeg:
-      soper = "-";
     case opPos:
-      soper = "+";
       if (!operand->GetType() || !operand->GetType()->Match(tm->GetInt())) {
         if (t) *t = operand->GetToken();
         if (msg) {
@@ -1219,7 +1205,6 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
       }
       break;
     case opNot:
-      soper = "!";
       if (!operand->GetType() || !operand->GetType()->Match(tm->GetBool())) {
         if (t) *t = operand->GetToken();
         if (msg) {
