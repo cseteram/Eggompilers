@@ -241,6 +241,12 @@ void CParser::varDeclaration(CAstScope *s)
 
     // varDeclaration -> ... varDeclSequence ...
     vector<string> allVars;
+
+    // add declared symbol's name 
+    vector<CSymbol*> symbols = s->GetSymbolTable()->GetSymbols();
+    for (const auto &symbol : symbols)
+      allVars.push_back(symbol->GetName());
+
     do {
       vector<string> l;
       CAstType *ttype;
