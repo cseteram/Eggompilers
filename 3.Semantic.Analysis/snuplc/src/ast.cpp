@@ -971,8 +971,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   if (lt == NULL || !lt->IsScalar()) {
     if (t) *t = lhs->GetToken();
     if (msg) {
-      out << "the type of LHS is not scalar type." << endl;
-      out << "LHS : ";
+      out << "the type of left operand is not scalar type." << endl;
+      out << "left operand : ";
       if (lt) out << lt << endl;
       else out << "<INVALID>" << endl;
       *msg = out.str();
@@ -982,8 +982,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   if (rt == NULL || !rt->IsScalar()) {
     if (t) *t = rhs->GetToken();
     if (msg) {
-      out << "the type of RHS is not scalar type." << endl;
-      out << "RHS : ";
+      out << "the type of right operand is not scalar type." << endl;
+      out << "right operand : ";
       if (rt) out << rt << endl;
       else out << "<INVALID>" << endl;
       *msg = out.str();
@@ -997,12 +997,12 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   // If we see this error, this means that there is something wrong in type conversion
   if (lt->IsPointer()) {
     if (t) *t = lhs->GetToken();
-    if (msg) *msg = "the type of LHS cannot be a pointer type";
+    if (msg) *msg = "the type of left operand cannot be a pointer type";
     return false;
   }
   if (rt->IsPointer()) {
     if (t) *t = rhs->GetToken();
-    if (msg) *msg = "the type of RHS cannot be a pointer type";
+    if (msg) *msg = "the type of right operand cannot be a pointer type";
     return false;
   }
 
@@ -1010,9 +1010,9 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   if (!lt->Match(rt)) {
     if (t) *t = GetToken();
     if (msg) {
-      out << "the type of LHS does not match with the type of RHS." << endl;
-      out << "LHS : " << lt << endl;
-      out << "RHS : " << rt << endl;
+      out << "the type of left operand does not match with the type of right operand." << endl;
+      out << "left operand : " << lt << endl;
+      out << "right operand : " << rt << endl;
       *msg = out.str();
     }
     return false;
@@ -1029,8 +1029,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
         if (msg) {
           out << "the type of operands should be an integer type "
                  "in " << soper << " operation." << endl;
-          out << "LHS : " << lt << endl;
-          out << "RHS : " << rt << endl;
+          out << "left operand : " << lt << endl;
+          out << "right operand : " << rt << endl;
           *msg = out.str();
         }
         return false;
@@ -1043,8 +1043,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
         if (msg) {
           out << "the type of operands should be an boolean type "
                  "in " << soper << " operation." << endl;
-          out << "LHS : " << lt << endl;
-          out << "RHS : " << rt << endl;
+          out << "left operand : " << lt << endl;
+          out << "right operand : " << rt << endl;
           *msg = out.str();
         }
         return false;
