@@ -687,7 +687,7 @@ CAstStatReturn* CParser::returnStatement(CAstScope *s)
 
   // returnStatement -> ... expression
   EToken tt = _scanner->Peek().GetType();
-  if (tt != kEnd && tt != tSemicolon)
+  if (tt != kEnd && tt != tSemicolon && tt != kElse)
     expr = expression(s);
 
   return new CAstStatReturn(t, s, expr);
@@ -925,7 +925,7 @@ CAstType* CParser::type(bool isParam)
         index.push_back(indexSize);
     }
     else if (!isParam)
-      SetError(t, "open array is not allowed unless it is a parameter.");
+      SetError(t, "expected 'tNumber', got 'tRBrak'");
     else
       index.push_back(CArrayType::OPEN);
 
