@@ -681,7 +681,7 @@ CAstStatReturn* CParser::returnStatement(CAstScope *s)
 
   // returnStatement -> ... expression
   EToken tt = _scanner->Peek().GetType();
-  if (tt != kEnd && tt != tSemicolon)
+  if (tt != kEnd && tt != tSemicolon && tt != kElse)
     expr = expression(s);
 
   return new CAstStatReturn(t, s, expr);
