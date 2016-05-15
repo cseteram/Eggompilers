@@ -411,6 +411,9 @@ bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
     if (t) *t = lhs->GetToken();
     if (msg) {
       out << "invalid variable type." << endl;
+      out << "\"" << lhs->GetSymbol()->GetName() << "\" : ";
+      if (lhs->GetType()) out << lhs->GetType() << endl;
+      else out << "<INVALID>" << endl;
       *msg = out.str();
     }
     return false;
@@ -420,6 +423,9 @@ bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
     if (t) *t = rhs->GetToken();
     if (msg) {
       out << "invalid value type." << endl;
+      out << "\"" << lhs->GetSymbol()->GetName() << "\" : ";
+      if (lhs->GetType()) out << lhs->GetType() << endl;
+      else out << "<INVALID>" << endl;
       *msg = out.str();
     }
     return false;
@@ -684,7 +690,10 @@ bool CAstStatIf::TypeCheck(CToken *t, string *msg) const
   if (!cond->GetType() || !cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
     if (t) *t = cond->GetToken();
     if (msg) {
-      out << "condition should be bool type." << endl;
+      out << "condition should be bool type, but" << endl;
+      if (cond->GetType()) out << cond->GetType();
+      else out << "<INVALID>";
+      out << " appeared" << endl;
       *msg = out.str();
     }
     return false;
@@ -812,7 +821,10 @@ bool CAstStatWhile::TypeCheck(CToken *t, string *msg) const
   if (!cond->GetType() || !cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
     if (t) *t = cond->GetToken();
     if (msg) {
-      out << "condition should be a bool type." << endl;
+      out << "condition should be bool type, but" << endl;
+      if (cond->GetType()) out << cond->GetType();
+      else out << "<INVALID>";
+      out << " appeared" << endl;
       *msg = out.str();
     }
     return false;
@@ -1006,15 +1018,21 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  string soper;
   switch (oper) {
     case opAdd:
+      soper = "+";
     case opSub:
+      soper = "-";
     case opMul:
+      soper = "*";
     case opDiv:
+      soper = "/";
       if (!lt->Match(tm->GetInt())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
-          out << "the type of operands should be an integer type in this operation." << endl;
+          out << "the type of operands should be an integer type "
+                 "in " << soper << " operation." << endl;
           out << "LHS : " << lt << endl;
           out << "RHS : " << rt << endl;
           *msg = out.str();
@@ -1023,11 +1041,14 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
       }
       break;
     case opAnd:
+      soper = "&&";
     case opOr:
+      soper = "||";
       if (!lt->Match(tm->GetBool())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
-          out << "the type of operands should be an boolean type in this operation." << endl;
+          out << "the type of operands should be an boolean type "
+                 "in " << soper << " operation." << endl;
           out << "LHS : " << lt << endl;
           out << "RHS : " << rt << endl;
           *msg = out.str();
@@ -1036,17 +1057,24 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
       }
       break;
     case opEqual:
+      soper = "=";
     case opNotEqual:
+      soper = "#";
       // when operation is '=' or '#'
       break;
     case opLessThan:
+      soper = "<";
     case opLessEqual:
+      soper = "<=";
     case opBiggerThan:
+      soper = ">";
     case opBiggerEqual:
+      soper = ">=";
       if (lt->Match(tm->GetBool())) {
         if (t) *t = lhs->GetToken();
         if (msg) {
-          out << "the type of operands cannot be boolean type in this operation." << endl;
+          out << "the type of operands cannot be boolean type "
+                 "in " << soper << " operation." << endl;
           *msg = out.str();
         }
         return false;
@@ -1170,13 +1198,18 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  string soper;
   switch (oper) {
     case opNeg:
+      soper = "-";
     case opPos:
+      soper = "+";
       if (!operand->GetType() || !operand->GetType()->Match(tm->GetInt())) {
         if (t) *t = operand->GetToken();
         if (msg) {
-          out << "the type of operand should be an integer type in this operation." << endl;
+
+          out << "the type of operand should be an integer type "
+                 "in " << soper << " operation." << endl;
           out << "operand : ";
           if (operand->GetType()) out << operand->GetType() << endl;
           else out << "<INVALID>" << endl;
@@ -1186,10 +1219,12 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
       }
       break;
     case opNot:
+      soper = "!";
       if (!operand->GetType() || !operand->GetType()->Match(tm->GetBool())) {
         if (t) *t = operand->GetToken();
         if (msg) {
-          out << "the type of operand should be a boolean type in this operation." << endl;
+          out << "the type of operand should be a boolean type "
+                 "in " << soper << " operation." << endl;
           out << "operand : ";
           if (operand->GetType()) out << operand->GetType() << endl;
           else out << "<INVALID>" << endl;
