@@ -963,7 +963,7 @@ CAstDesignator* CParser::qualident(CAstScope *s)
   const CSymbol* saveSymbol = id->GetSymbol();
   CAstArrayDesignator *arrayId = new CAstArrayDesignator(saveToken, saveSymbol);
 
-  if (!arrayId->GetType()->IsArray()) {
+  if (!arrayId->GetType() || !arrayId->GetType()->IsArray()) {
     SetError(t, "access with index which is actually not an array");
     return id;
   }
