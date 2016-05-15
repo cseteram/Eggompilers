@@ -406,12 +406,14 @@ bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
 
   if (!rhs->TypeCheck(t, msg))
     return false;
-
+  
+  // the type of lhs should not INVALID or non-scalar type
   if (!lhs->GetType() || !lhs->GetType()->IsScalar()) {
     if (t) *t = lhs->GetToken();
     if (msg) {
       out << "invalid variable type." << endl;
-      out << "\"" << lhs->GetSymbol()->GetName() << "\" : ";
+      // out << "\"" << lhs->GetSymbol()->GetName() << "\" : ";
+      out << "LHS : ";
       if (lhs->GetType()) out << lhs->GetType() << endl;
       else out << "<INVALID>" << endl;
       *msg = out.str();
@@ -419,18 +421,21 @@ bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  // the type of rhs should not INVALID or non-scalar type
   if (!rhs->GetType() || !rhs->GetType()->IsScalar()) {
     if (t) *t = rhs->GetToken();
     if (msg) {
       out << "invalid value type." << endl;
-      out << "\"" << lhs->GetSymbol()->GetName() << "\" : ";
-      if (lhs->GetType()) out << lhs->GetType() << endl;
+      // out << "\"" << rhs->GetSymbol()->GetName() << "\" : ";
+      out << "RHS : ";
+      if (rhs->GetType()) out << rhs->GetType() << endl;
       else out << "<INVALID>" << endl;
       *msg = out.str();
     }
     return false;
   }
 
+  // the type of lhs matches with the type of rhs
   if (!lhs->GetType()->Match(rhs->GetType())) {
     if (t) *t = lhs->GetToken();
     if (msg) {
@@ -562,21 +567,22 @@ bool CAstStatReturn::TypeCheck(CToken *t, string *msg) const
   const CType *st = GetScope()->GetType();
   CAstExpression *e = GetExpression();
 
+  // if procedure has "return expression", 
   if (st->Match(CTypeManager::Get()->GetNull())) {
     if (e) {
       if (t) *t = e->GetToken();
       if (msg) {
-        out << "procedure has no return value/expression." << endl;
+        out << "procedure should have no return value/expression." << endl;
         *msg = out.str();
       }
       return false;
     }
-  }
-  else {
+  } 
+  else { // if function has "return" and no expression right after "return", 
     if (!e) {
       if (t) *t = GetToken();
       if (msg) {
-        out << "fuction should have return value/expression." << endl;
+        out << "function should have return value/expression." << endl;
         *msg = out.str();
       }
       return false;
@@ -585,6 +591,7 @@ bool CAstStatReturn::TypeCheck(CToken *t, string *msg) const
     if (!e->TypeCheck(t, msg))
       return false;
 
+    // if return type mismatched
     if (!st->Match(e->GetType())) {
       if (t) *t = e->GetToken();
       if (msg) {
@@ -684,13 +691,15 @@ bool CAstStatIf::TypeCheck(CToken *t, string *msg) const
   CAstStatement *ifBody = GetIfBody();
   CAstStatement *elseBody = GetElseBody();
 
+  // Type check for condition expression
   if (!cond->TypeCheck(t, msg))
     return false;
 
+  // check whether its type is boolean type
   if (!cond->GetType() || !cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
     if (t) *t = cond->GetToken();
     if (msg) {
-      out << "condition should be bool type, but" << endl;
+      out << "condition should be bool type, but ";
       if (cond->GetType()) out << cond->GetType();
       else out << "<INVALID>";
       out << " appeared" << endl;
@@ -699,12 +708,14 @@ bool CAstStatIf::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  // Type check for statements in ifBody (can be empty)
   while (ifBody) {
     if (!ifBody->TypeCheck(t, msg))
       return false;
     ifBody = ifBody->GetNext();
   }
 
+  // Type check for statements in elseBody (can be empty)
   while (elseBody) {
     if (!elseBody->TypeCheck(t, msg))
       return false;
@@ -815,13 +826,15 @@ bool CAstStatWhile::TypeCheck(CToken *t, string *msg) const
   CAstExpression *cond = GetCondition();
   CAstStatement *body = GetBody();
 
+  // Type check for condition expression
   if (!cond->TypeCheck(t, msg))
     return false;
 
+  // check whether condition's type is boolean type
   if (!cond->GetType() || !cond->GetType()->Match(CTypeManager::Get()->GetBool())) {
     if (t) *t = cond->GetToken();
     if (msg) {
-      out << "condition should be bool type, but" << endl;
+      out << "condition should be bool type, but ";
       if (cond->GetType()) out << cond->GetType();
       else out << "<INVALID>";
       out << " appeared" << endl;
@@ -830,6 +843,7 @@ bool CAstStatWhile::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  // Type check for statements in while-body (can be empty)
   while (body) {
     if (!body->TypeCheck(t, msg))
       return false;
@@ -993,8 +1007,6 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
 
   // check left type and right type is not pointer type 
   // remark that pointer type is scalar type
-  // In SNUPL/1, there is no way to handle pointer in user mode
-  // If we see this error, this means that there is something wrong in type conversion
   if (lt->IsPointer()) {
     if (t) *t = lhs->GetToken();
     if (msg) *msg = "the type of left operand cannot be a pointer type";
@@ -1018,7 +1030,7 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
-  string soper; // TODO : match string operation.
+  string soper = "this"; // TODO : match string operation.
   switch (oper) {
     case opAdd:
     case opSub:
@@ -1181,14 +1193,16 @@ bool CAstUnaryOp::TypeCheck(CToken *t, string *msg) const
   EOperation oper = GetOperation();
   CTypeManager *tm = CTypeManager::Get();
 
+  // check operand's type checking
   if (!operand->TypeCheck(t,msg)) {
     CAstConstant *number = dynamic_cast<CAstConstant*> (operand);
+    // ignore type checking failure if its node is -2147483648
     if (number != NULL && oper == opNeg)
       return true;
     return false;
   }
 
-  string soper; // TODO : match string operation.
+  string soper = "this"; // TODO : match string operation.
   switch (oper) {
     case opNeg:
     case opPos:
@@ -1323,6 +1337,7 @@ bool CAstSpecialOp::TypeCheck(CToken *t, string *msg) const
   if (!_operand->TypeCheck(t, msg))
     return false;
 
+  // opDeref operation can be valid only when the operand's type is pointer type
   if (oper == opDeref) {
     if (!_operand->GetType() || !_operand->GetType()->IsPointer()) {
       if (t) *t = _operand->GetToken();
@@ -1440,6 +1455,7 @@ bool CAstFunctionCall::TypeCheck(CToken *t, string *msg) const
   CTypeManager *tm = CTypeManager::Get();
   const CSymProc *proc = dynamic_cast<const CSymProc*>(_symbol);
 
+  // check the number of parameters
   if (GetNArgs() != proc->GetNParams()) {
     if (t) *t = GetToken();
     if (msg) {
@@ -1451,6 +1467,7 @@ bool CAstFunctionCall::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  // type checking for expression and its type is well matched with the signature
   for (int i = 0; i < GetNArgs(); i++) {
     CAstExpression *expr = GetArg(i);
     const CType *paramType = proc->GetParam(i)->GetDataType();
@@ -1568,6 +1585,7 @@ bool CAstDesignator::TypeCheck(CToken *t, string *msg) const
 
 const CType* CAstDesignator::GetType(void) const
 {
+  // just returns the symbol's datatype
   return GetSymbol()->GetDataType();
 }
 
@@ -1651,9 +1669,12 @@ bool CAstArrayDesignator::TypeCheck(CToken *t, string *msg) const
 
   for (int i = 0; i < GetNIndices(); i++) {
     CAstExpression *expr = GetIndex(i);
+
+    // type checking for expression
     if (!expr->TypeCheck(t,msg))
       return false;
 
+    // check whether its type is integer type
     if (!expr->GetType() || !expr->GetType()->Match(tm->GetInt())) {
       if (t) *t = expr->GetToken();
       if (msg) {
@@ -1786,6 +1807,9 @@ bool CAstConstant::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
+  // type check fails if the value is 2147483648
+  // note that this failure can be ignored by CAstUnaryOp,
+  // especially the node is unary("-", constant(2147483648)) 
   if (GetValue() == (1LL << 31)) {
     if (t) *t = GetToken();
     if (msg) {
