@@ -1075,6 +1075,8 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
         if (msg) {
           out << "the type of operands cannot be boolean type "
                  "in " << soper << " operation." << endl;
+          out << "left operand : " << lt << endl;
+          out << "right operand : " << rt << endl;
           *msg = out.str();
         }
         return false;
