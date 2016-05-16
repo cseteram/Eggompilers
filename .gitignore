@@ -6,3 +6,4 @@
 
 /1.Scanning/snuplc/test_scanner
 /1.Scanning/snuplc/obj/*.o
+*.mod.ast.dot
