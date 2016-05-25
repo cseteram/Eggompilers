@@ -432,7 +432,7 @@ class CAstStatement : public CAstNode {
     /// @name transformation into TAC
     /// @{
 
-    virtual CTacAddr* ToTac(CCodeBlock *cb, CTacLabel *next);
+    virtual CTacAddr* ToTac(CCodeBlock *cb, CTacLabel *next) = 0;
 
     /// @}
 

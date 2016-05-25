@@ -248,6 +248,20 @@ void CAstScope::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstScope::ToTac(CCodeBlock *cb)
 {
+  assert(cb);
+
+  CAstStatement *s = GetStatementSequence();
+  while (s) {
+    CTacLabel *next = cb->CreateLabel();
+    s->ToTac(cb, next);
+    cb->AddInstr(next);
+    s = s->GetNext();
+  }
+
+  // cb->CleanupControlFlow();
+  // this code removes redundant labels and goto instructions.
+  // activate it after the implementation is complete.
+
   return NULL;
 }
 
@@ -368,11 +382,6 @@ CAstStatement* CAstStatement::GetNext(void) const
   return _next;
 }
 
-CTacAddr* CAstStatement::ToTac(CCodeBlock *cb, CTacLabel *next)
-{
-  return NULL;
-}
-
 
 //------------------------------------------------------------------------------
 // CAstStatAssign
@@ -406,7 +415,7 @@ bool CAstStatAssign::TypeCheck(CToken *t, string *msg) const
 
   if (!rhs->TypeCheck(t, msg))
     return false;
-  
+
   // the type of lhs should not INVALID or non-scalar type
   if (!lhs->GetType() || !lhs->GetType()->IsScalar()) {
     if (t) *t = lhs->GetToken();
@@ -491,6 +500,18 @@ void CAstStatAssign::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstStatAssign::ToTac(CCodeBlock *cb, CTacLabel *next)
 {
+  CTacLabel *nextDst = cb->CreateLabel();
+  CTacLabel *nextSrc = cb->CreateLabel();
+
+  CTacAddr *dst = GetLHS()->ToTac(cb, nextDst);
+  cb->AddInstr(nextDst);
+
+  CTacAddr *src = GetRHS()->ToTac(cb, nextSrc);
+  cb->AddInstr(nextSrc);
+
+  cb->AddInstr(new CTacInstr(opAssign, dst, src, NULL));
+  cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
+
   return NULL;
 }
 
@@ -538,6 +559,8 @@ void CAstStatCall::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstStatCall::ToTac(CCodeBlock *cb, CTacLabel *next)
 {
+  cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
+
   return NULL;
 }
 
@@ -567,7 +590,7 @@ bool CAstStatReturn::TypeCheck(CToken *t, string *msg) const
   const CType *st = GetScope()->GetType();
   CAstExpression *e = GetExpression();
 
-  // if procedure has "return expression", 
+  // if procedure has "return expression"
   if (st->Match(CTypeManager::Get()->GetNull())) {
     if (e) {
       if (t) *t = e->GetToken();
@@ -577,8 +600,8 @@ bool CAstStatReturn::TypeCheck(CToken *t, string *msg) const
       }
       return false;
     }
-  } 
-  else { // if function has "return" and no expression right after "return", 
+  }
+  else { // if function has "return" and no expression right after "return"
     if (!e) {
       if (t) *t = GetToken();
       if (msg) {
@@ -655,6 +678,14 @@ void CAstStatReturn::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstStatReturn::ToTac(CCodeBlock *cb, CTacLabel *next)
 {
+  CTacLabel *nextRetval = cb->CreateLabel();
+
+  CTacAddr *retval = GetExpression()->ToTac(cb, nextRetval);
+  cb->AddInstr(nextRetval);
+
+  cb->AddInstr(new CTacInstr(opReturn, NULL, retval, NULL));
+  cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
+
   return NULL;
 }
 
@@ -785,7 +816,7 @@ void CAstStatIf::toDot(ostream &out, int indent) const
       string prev = dotID();
       do {
         s->toDot(out, indent);
-        out << ind << prev << " -> " << s->dotID() << " [style=dotted];" 
+        out << ind << prev << " -> " << s->dotID() << " [style=dotted];"
             << endl;
         prev = s->dotID();
         s = s->GetNext();
@@ -796,6 +827,22 @@ void CAstStatIf::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstStatIf::ToTac(CCodeBlock *cb, CTacLabel *next)
 {
+  CTacLabel *nextTrue = cb->CreateLabel();
+  CTacLabel *nextFalse =
+    GetElseBody() ? cb->CreateLabel() : next;
+
+  GetCondition()->ToTac(cb, nextTrue, nextFalse);
+  cb->AddInstr(nextTrue);
+  GetIfBody()->ToTac(cb, next);
+
+  if (GetElseBody()) {
+    cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
+    cd->AddInstr(nextFalse);
+    GetElseBody()->ToTac(cb, next);
+  }
+
+  cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
+
   return NULL;
 }
 
@@ -903,6 +950,16 @@ void CAstStatWhile::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstStatWhile::ToTac(CCodeBlock *cb, CTacLabel *next)
 {
+  CTacLabel *begin = cb->CreateLabel();
+  CTacLabel *nextTrue = cb->CreateLabel();
+
+  cb->AddInstr(begin);
+  GetCondition()->ToTac(cb, nextTrue, next);
+  cb->AddInstr(nextTrue);
+  GetBody()->ToTac(cb, begin);
+
+  cb->AddInstr(new CTacInstr(opGoto, begin, NULL, NULL));
+
   return NULL;
 }
 
@@ -923,6 +980,8 @@ CTacAddr* CAstExpression::ToTac(CCodeBlock *cb)
 CTacAddr* CAstExpression::ToTac(CCodeBlock *cb,
                                 CTacLabel *ltrue, CTacLabel *lfalse)
 {
+  // generate jumping code for boolean expression
+
   return NULL;
 }
 
