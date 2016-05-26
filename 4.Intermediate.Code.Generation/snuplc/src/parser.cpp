@@ -136,7 +136,7 @@ void CParser::InitSymbolTable(CSymtab *s)
   fun = new CSymProc("WriteInt", tm->GetNull());
   fun->AddParam(new CSymParam(0, "i", tm->GetInt()));
   s->AddSymbol(fun);
-  
+
   // procedure WriteChar(c: char);
   fun = new CSymProc("WriteChar", tm->GetNull());
   fun->AddParam(new CSymParam(0, "c", tm->GetChar()));
@@ -157,7 +157,7 @@ CAstModule* CParser::module(void)
   //
   // module ::= "module" ident ";" varDeclaration { subroutineDecl }
   //            "begin" stateSequence "end" ident ".".
-  // 
+  //
   CToken t;
 
   // module -> "module" ident ";" ...

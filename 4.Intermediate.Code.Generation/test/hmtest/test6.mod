@@ -11,15 +11,9 @@ var i, j: integer;
 
 procedure foo(M: integer[][]);
 var n, m: integer;
-    N: integer[10][5];
+    N: integer[10][10][10];
 begin
-  n := 3;
-  j := 1111111;
-  M[1][n] := i;
-  j := 1111111;
-  m := M[1][n];
-  j := 1111111;
-  N[2-1][1+2] := i
+  N[1+2][M[0][0]][0] := M[i*j][ReadInt()]
 end foo;
 
 begin

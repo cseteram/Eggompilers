@@ -1816,6 +1816,22 @@ void CAstArrayDesignator::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstArrayDesignator::ToTac(CCodeBlock *cb)
 {
+  ----------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return NULL;
 }
 
@@ -1868,7 +1884,7 @@ bool CAstConstant::TypeCheck(CToken *t, string *msg) const
 
   // type check fails if the value is 2147483648
   // note that this failure can be ignored by CAstUnaryOp,
-  // especially the node is unary("-", constant(2147483648)) 
+  // especially the node is unary("-", constant(2147483648))
   if (GetValue() == (1LL << 31)) {
     if (t) *t = GetToken();
     if (msg) {
