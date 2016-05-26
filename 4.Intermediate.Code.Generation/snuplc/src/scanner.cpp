@@ -261,7 +261,7 @@ string CToken::unescape(const string text)
   }
 
   return s;
-}  
+}
 
 ostream& operator<<(ostream &out, const CToken &t)
 {
@@ -469,7 +469,7 @@ CToken* CScanner::Scan()
         token = tNumber;
         while (_in->good()) {
           char nc = _in->peek();
-          if (!IsDigit(nc)) 
+          if (!IsDigit(nc))
             break;
           tokval += GetChar();
         }
@@ -485,7 +485,7 @@ CToken* CScanner::Scan()
             break;
           tokval += GetChar();
         }
-        
+
         auto iter = keywords.find(tokval);
         if (iter != keywords.end())
           token = iter->second;
@@ -609,7 +609,7 @@ void CScanner::ScanChar(EToken &token, string &tokval)
           valid = false;
           tokval += '\\';
           tokval += GetChar();
-          break; 
+          break;
       }
 
       if (!valid) break;
@@ -708,11 +708,11 @@ bool CScanner::IsLetter(char c) const
     return true;
   if ('a' <= c && c <= 'z')
     return true;
-  
+
   return c == '_';
 }
 
 bool CScanner::IsDigit(char c) const
 {
-  return '0' <= c && c <= '9';   
+  return '0' <= c && c <= '9';
 }

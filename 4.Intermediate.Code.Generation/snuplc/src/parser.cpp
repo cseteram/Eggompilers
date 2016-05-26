@@ -136,7 +136,7 @@ void CParser::InitSymbolTable(CSymtab *s)
   fun = new CSymProc("WriteInt", tm->GetNull());
   fun->AddParam(new CSymParam(0, "i", tm->GetInt()));
   s->AddSymbol(fun);
-  
+
   // procedure WriteChar(c: char);
   fun = new CSymProc("WriteChar", tm->GetNull());
   fun->AddParam(new CSymParam(0, "c", tm->GetChar()));
@@ -157,7 +157,7 @@ CAstModule* CParser::module(void)
   //
   // module ::= "module" ident ";" varDeclaration { subroutineDecl }
   //            "begin" stateSequence "end" ident ".".
-  // 
+  //
   CToken t;
 
   // module -> "module" ident ";" ...
@@ -187,7 +187,7 @@ CAstModule* CParser::module(void)
       case kFunc:
         sub = functionDecl(m);
         break;
-        
+
       default:
         SetError(_scanner->Peek(), "invalid subroutine declaration");
         break;
@@ -242,7 +242,7 @@ void CParser::varDeclaration(CAstScope *s)
     // varDeclaration -> ... varDeclSequence ...
     vector<string> allVars;
 
-    // add declared symbol's name 
+    // add declared symbol's name
     vector<CSymbol*> symbols = s->GetSymbolTable()->GetSymbols();
     for (const auto &symbol : symbols)
       allVars.push_back(symbol->GetName());
@@ -298,13 +298,13 @@ void CParser::varDeclInternal(vector<string> &vars, vector<string> &allVars)
   //
   // varDecl ::= ident { "," ident } ":" type.
   //
-  
+
   while (!_abort) {
     // varDecl -> ident ...
     CToken e = _scanner->Get();
     if (e.GetType() != tIdent)
       SetError(e, "invalid identifier");
-      
+
     for (const auto &var : allVars) {
       if (var == e.GetValue()) {
         SetError(e, "re-declaration variable \"" + e.GetValue() + "\"");
@@ -313,7 +313,7 @@ void CParser::varDeclInternal(vector<string> &vars, vector<string> &allVars)
     }
     vars.push_back(e.GetValue());
     allVars.push_back(e.GetValue());
-    
+
     e = _scanner->Peek();
     if (e.GetType() == tColon) break;
     else if (e.GetType() != tComma)
@@ -398,7 +398,7 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   vector<string> paramNames;
   vector<CAstType*> paramTypes;
   CAstType* returnType;
-  
+
   e = _scanner->Peek();
   switch (e.GetType()) {
     case tLParen:
@@ -417,10 +417,10 @@ CAstProcedure* CParser::functionDecl(CAstScope *s)
   if (returnType->GetType()->IsArray())
     SetError(returnType->GetToken(), "function cannot return array type.");
   Consume(tSemicolon);
-  
-  CSymProc *symbol = new CSymProc(functionName, returnType->GetType()); 
+
+  CSymProc *symbol = new CSymProc(functionName, returnType->GetType());
   s->GetSymbolTable()->AddSymbol(symbol);
-  
+
   CAstProcedure *ret = new CAstProcedure(t, functionName, s, symbol);
   AddParameters(ret, symbol, paramNames, paramTypes);
 
@@ -436,7 +436,7 @@ void CParser::formalParam
 
   // formalParam -> "(" ...
   Consume(tLParen);
-  
+
   // formalParam -> ... [ varDeclSequence ] ...
   // varDeclSequence -> varDecl { ";" varDecl }
   CToken e = _scanner->Peek();
@@ -456,7 +456,7 @@ void CParser::formalParam
       }
 
       e = _scanner->Peek();
-      if (e.GetType() == tRParen) 
+      if (e.GetType() == tRParen)
         break;
       else Consume(tSemicolon);
     } while (!_abort);
@@ -610,7 +610,7 @@ CAstFunctionCall* CParser::functionCall(CAstScope *s)
 
   CAstFunctionCall *func =
     new CAstFunctionCall(t, dynamic_cast<const CSymProc*>(symbol));
-  
+
   // subroutineCall -> ... "(" ...
   Consume(tLParen);
 
@@ -864,7 +864,7 @@ CAstExpression* CParser::factor(CAstScope *s)
           else
             n = qualident(s);
         }
-        else 
+        else
           SetError(tt, "undeclared variable \"" + tt.GetValue() + "\"");
       }
       break;
