@@ -1288,7 +1288,7 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb)
     return val;
   }
 
-  CTacTemp *val = cb->CreateTemp(tm->GetInt());
+  CTacTemp *val = cb->CreateTemp(tm->GetBool());
   CTacLabel *ltrue = cb->CreateLabel(), *lfalse = cb->CreateLabel();
   CTacLabel *lend = cb->CreateLabel();
   ToTac(cb, ltrue, lfalse);
@@ -1321,7 +1321,8 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb,
     else {
       CTacLabel *nextCond = cb->CreateLabel();
       left->ToTac(cb, ltrue, nextCond);
-      left->ToTac(cb, ltrue, lfalse);
+      cb->AddInstr(nextCond);
+      right->ToTac(cb, ltrue, lfalse);
     }
   }
 
