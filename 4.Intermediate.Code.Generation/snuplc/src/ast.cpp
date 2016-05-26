@@ -581,7 +581,7 @@ CTacAddr* CAstStatCall::ToTac(CCodeBlock *cb, CTacLabel *next)
   if (call->GetType() != CTypeManager::Get()->GetNull())
     tmp = cb->CreateTemp(call->GetType());
   cb->AddInstr(new CTacInstr(opCall, tmp, new CTacName(call->GetSymbol()), NULL));
-    
+
   cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
 
   return NULL;
@@ -865,7 +865,7 @@ CTacAddr* CAstStatIf::ToTac(CCodeBlock *cb, CTacLabel *next)
   GetCondition()->ToTac(cb, nextTrue, nextFalse);
 
   // CTacLabel *ifEnd = cb->CreateLabel();
-  
+
   cb->AddInstr(nextTrue);
   while (ifBody) {
     CTacLabel *nextIfBody = cb->CreateLabel();
@@ -1008,7 +1008,7 @@ CTacAddr* CAstStatWhile::ToTac(CCodeBlock *cb, CTacLabel *next)
     CTacLabel *nextBody = cb->CreateLabel();
     bodyStat->ToTac(cb, nextBody);
     cb->AddInstr(nextBody);
-    bodyStat = bodyStat->GetNext();    
+    bodyStat = bodyStat->GetNext();
   }
 
   cb->AddInstr(new CTacInstr(opGoto, cond, NULL, NULL));
@@ -1092,10 +1092,10 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
   CAstExpression *lhs = GetLeft(), *rhs = GetRight();
   EOperation oper = GetOperation();
   CTypeManager *tm = CTypeManager::Get();
-  
+
   if (!lhs->TypeCheck(t,msg) || !rhs->TypeCheck(t,msg))
     return false;
-  
+
   // binary operation requires that both left type and right type are scalar type
   const CType *lt = lhs->GetType(), *rt = rhs->GetType();
   if (lt == NULL || !lt->IsScalar()) {
@@ -1121,7 +1121,7 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
-  // check left type and right type is not pointer type 
+  // check left type and right type is not pointer type
   // remark that pointer type is scalar type
   if (lt->IsPointer()) {
     if (t) *t = lhs->GetToken();
@@ -1134,7 +1134,7 @@ bool CAstBinaryOp::TypeCheck(CToken *t, string *msg) const
     return false;
   }
 
-  // binary operation requires that left type equals right type 
+  // binary operation requires that left type equals right type
   if (!lt->Match(rt)) {
     if (t) *t = GetToken();
     if (msg) {
@@ -1475,7 +1475,7 @@ CTacAddr* CAstUnaryOp::ToTac(CCodeBlock *cb)
     CTacLabel *ltrue = cb->CreateLabel(), *lfalse = cb->CreateLabel();
     CTacLabel *lend = cb->CreateLabel();
     ToTac(cb, ltrue, lfalse);
-    
+
     retval = cb->CreateTemp(tm->GetBool());
 
     cb->AddInstr(ltrue);
@@ -1569,7 +1569,7 @@ const CType* CAstSpecialOp::GetType(void) const
       ret = NULL;
       break;
   }
-  
+
   return ret;
 }
 
@@ -2139,7 +2139,7 @@ CTacAddr* CAstConstant::ToTac(CCodeBlock *cb,
 {
   long long cond = GetValue();
 
-  if (cond) 
+  if (cond)
     cb->AddInstr(new CTacInstr(opGoto, ltrue, NULL, NULL));
   else
     cb->AddInstr(new CTacInstr(opGoto, lfalse, NULL, NULL));
