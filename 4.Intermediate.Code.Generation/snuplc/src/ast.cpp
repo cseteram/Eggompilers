@@ -1570,7 +1570,8 @@ CTacAddr* CAstSpecialOp::ToTac(CCodeBlock *cb)
   CAstExpression *operand = GetOperand();
 
   CTacTemp *ret = cb->CreateTemp(operand->GetType());
-  cb->AddInstr(new CTacInstr(opAddress, ret, operand->ToTac(cb), NULL));
+  CTacAddr *src = operand->ToTac(cb);
+  cb->AddInstr(new CTacInstr(opAddress, ret, src, NULL));
   return ret;
 }
 
@@ -1631,7 +1632,7 @@ bool CAstFunctionCall::TypeCheck(CToken *t, string *msg) const
     if (!expr->TypeCheck(t,msg))
       return false;
 
-    if (!expr->GetType() || !paramType || 
+    if (!expr->GetType() || !paramType ||
         !paramType->Match(expr->GetType())) {
       if (t) *t = expr->GetToken();
       if (msg) {
@@ -1927,15 +1928,78 @@ void CAstArrayDesignator::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstArrayDesignator::ToTac(CCodeBlock *cb)
 {
-  return NULL;
+  CToken t;
+  CTypeManager *tm = CTypeManager::Get();
+  CSymtab *st = cb->GetOwner()->GetSymbolTable();
+
+  // addressed array name
+  CTacAddr *id = new CTacName(GetSymbol());
+
+  if (GetSymbol()->GetDataType()->IsArray()) {
+    CTacTemp *ptr = cb->CreateTemp(GetSymbol()->GetDataType());
+    cb->AddInstr(new CTacInstr(opAddress, ptr, id, NULL));
+    id = ptr;
+  }
+
+  const CSymbol *DIM_SYM = st->FindSymbol("DIM");
+  CAstFunctionCall *DIM_FUN =
+    new CAstFunctionCall(t, dynamic_cast<const CSymProc*>(DIM_SYM));
+
+  CAstDesignator *DIM_ARR = new CAstDesignator(GetToken(), GetSymbol());
+  CAstConstant *DIM_VAL = new CAstConstant(t, tm->GetInt(), 0);
+
+  CTacAddr *idx = NULL;
+  for (int i = 0; i < GetNIndices(); i++) {
+    // evaluate index
+    if (idx) {
+      CTacAddr *prev = GetIndex(i)->ToTac(cb);
+      CTacAddr *next = cb->CreateTemp(tm->GetInt());
+      cb->AddInstr(new CTacInstr(opAdd, next, idx, prev));
+      idx = next;
+    }
+    else
+      idx = GetIndex(i)->ToTac(cb);
+
+    // evaluate entry size
+    if (i < GetNIndices() - 1) {
+      // call dimention size
+      DIM_FUN->AddArg(this);
+      DIM_VAL->SetValue(i + 2);
+      DIM_FUN->AddArg(DIM_VAL);
+      CTacAddr *entrySize = DIM_FUN->ToTac(cb);
+
+      // multiply dimention size
+      CTacAddr *next = cb->CreateTemp(tm->GetInt());
+      cb->AddInstr(new CTacInstr(opMul, next, idx, entrySize));
+      idx = next;
+    }
+  }
+
+  // multiply data size
+  CTacTemp *tmp = cb->CreateTemp(tm->GetInt());
+  cb->AddInstr(new CTacInstr(opMul, tmp, idx, new CTacConst(4)));
+  idx = tmp;
+
+  // calculate array offset
+  const CSymbol *DOFS_SYM = st->FindSymbol("DOFS");
+  CAstFunctionCall *DOFS_FUN =
+    new CAstFunctionCall(t, dynamic_cast<const CSymProc*>(DOFS_SYM));
+  CTacAddr *ofs = DOFS_FUN->ToTac(cb);
+
+  tmp = cb->CreateTemp(tm->GetInt());
+  cb->AddInstr(new CTacInstr(opAdd, tmp, idx, ofs));
+  idx = tmp;
+
+  tmp = cb->CreateTemp(tm->GetInt());
+  cb->AddInstr(new CTacInstr(opAdd, tmp, id, idx));
+
+  return new CTacReference(tmp->GetSymbol());
 }
 
 CTacAddr* CAstArrayDesignator::ToTac(CCodeBlock *cb,
                                      CTacLabel *ltrue, CTacLabel *lfalse)
 {
-  cout << "CAstArrayDesignator not yet implemented." << endl;
-  assert(false);
-  return NULL;
+  return ToTac(cb);
 }
 
 
