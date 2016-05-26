@@ -1,0 +1,10 @@
+digraph IR {
+  graph [fontname="Times New Roman",fontsize=10];
+  node  [fontname="Courier New",fontsize=10];
+  edge  [fontname="Times New Roman",fontsize=10];
+
+  // scope 'test6'
+  test6_cb [label="test6\r  0:     assign i <- 0\l  1:     &()    t0 <- A\l  2:     param  0 <- t0\l  3:     call   foo\l",shape=box]
+  // scope 'foo'
+  foo_cb [label="foo\r  0:     assign n <- 3\l  1:     assign j <- 1111111\l  2:     param  1 <- 2\l  3:     param  0 <- M\l  4:     call   t0 <- DIM\l  5:     mul    t1 <- 1, t0\l  6:     add    t2 <- t1, n\l  7:     mul    t3 <- t2, 4\l  8:     param  0 <- M\l  9:     call   t4 <- DOFS\l 10:     add    t5 <- t3, t4\l 11:     add    t6 <- M, t5\l 12:     assign @t6 <- i\l 13:     assign j <- 1111111\l 14:     param  1 <- 2\l 15:     param  0 <- M\l 16:     call   t7 <- DIM\l 17:     mul    t8 <- 1, t7\l 18:     add    t9 <- t8, n\l 19:     mul    t10 <- t9, 4\l 20:     param  0 <- M\l 21:     call   t11 <- DOFS\l 22:     add    t12 <- t10, t11\l 23:     add    t13 <- M, t12\l 24:     assign m <- @t13\l 25:     assign j <- 1111111\l 26:     &()    t14 <- N\l 27:     sub    t15 <- 2, 1\l 28:     param  1 <- 2\l 29:     &()    t16 <- N\l 30:     param  0 <- t16\l 31:     call   t17 <- DIM\l 32:     mul    t18 <- t15, t17\l 33:     add    t19 <- 1, 2\l 34:     add    t20 <- t18, t19\l 35:     mul    t21 <- t20, 4\l 36:     &()    t22 <- N\l 37:     param  0 <- t22\l 38:     call   t23 <- DOFS\l 39:     add    t24 <- t21, t23\l 40:     add    t25 <- t14, t24\l 41:     assign @t25 <- i\l",shape=box]
+};
