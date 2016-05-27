@@ -3,7 +3,7 @@
 
 module pstest04;
 
-var a : integer[3][4][5][6];
+var a : integer[3][5][5][6];
 
 function f(a : integer[][5][][]) : integer;
 begin

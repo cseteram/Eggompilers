@@ -1305,23 +1305,23 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb)
 CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb,
                               CTacLabel *ltrue, CTacLabel *lfalse)
 {
-  CAstExpression *left = GetLeft(), *right = GetRight();
   EOperation oper = GetOperation();
+  CAstExpression *left = GetLeft(), *right = GetRight();
+  CTacLabel *nextCond = cb->CreateLabel();
 
   if (IsRelOp(oper)) {
-    cb->CreateLabel();
     cb->AddInstr(new CTacInstr(oper, ltrue, left->ToTac(cb), right->ToTac(cb)));
     cb->AddInstr(new CTacInstr(opGoto, lfalse));
   }
   else {
     if (oper == opAnd) {
-      CTacLabel *nextCond = cb->CreateLabel();
+    //  CTacLabel *nextCond = cb->CreateLabel();
       left->ToTac(cb, nextCond, lfalse);
       cb->AddInstr(nextCond);
       right->ToTac(cb, ltrue, lfalse);
     }
     else {
-      CTacLabel *nextCond = cb->CreateLabel();
+    //  CTacLabel *nextCond = cb->CreateLabel();
       left->ToTac(cb, ltrue, nextCond);
       cb->AddInstr(nextCond);
       right->ToTac(cb, ltrue, lfalse);
@@ -1468,8 +1468,20 @@ CTacAddr* CAstUnaryOp::ToTac(CCodeBlock *cb)
   CTacTemp *retval = NULL;
 
   if (oper == opPos || oper == opNeg) {
-    retval = cb->CreateTemp(tm->GetInt());
-    cb->AddInstr(new CTacInstr(oper, retval, GetOperand()->ToTac(cb)));
+    CAstConstant *number = dynamic_cast<CAstConstant*>(GetOperand());
+
+    if (number == NULL) {
+      CTacAddr *operandTac = GetOperand()->ToTac(cb);
+      retval = cb->CreateTemp(tm->GetInt());
+      cb->AddInstr(new CTacInstr(oper, retval, operandTac));
+    }
+    else {
+      long long val = number->GetValue();
+      if (oper == opNeg) 
+        val = -val;
+      CTacConst *numTac = new CTacConst(val);
+      return numTac;
+    }
   }
   else {
     CTacLabel *ltrue = cb->CreateLabel(), *lfalse = cb->CreateLabel();
