@@ -1,0 +1,16 @@
+digraph IR {
+  graph [fontname="Times New Roman",fontsize=10];
+  node  [fontname="Courier New",fontsize=10];
+  edge  [fontname="Times New Roman",fontsize=10];
+
+  // scope 'hmtest03'
+  hmtest03_cb [label="hmtest03\r  0:     &()    t0 <- a\l  1:     mul    t1 <- 2, 4\l  2:     &()    t2 <- a\l  3:     param  0 <- t2\l  4:     call   t3 <- DOFS\l  5:     add    t4 <- t1, t3\l  6:     add    t5 <- t0, t4\l  7:     param  0 <- @t5\l  8:     call   fun1\l  9:     &()    t6 <- b\l 10:     param  1 <- 2\l 11:     &()    t7 <- b\l 12:     param  0 <- t7\l 13:     call   t8 <- DIM\l 14:     mul    t9 <- 2, t8\l 15:     add    t10 <- t9, 3\l 16:     param  1 <- 3\l 17:     &()    t11 <- b\l 18:     param  0 <- t11\l 19:     call   t12 <- DIM\l 20:     mul    t13 <- t10, t12\l 21:     add    t14 <- t13, 4\l 22:     mul    t15 <- t14, 4\l 23:     &()    t16 <- b\l 24:     param  0 <- t16\l 25:     call   t17 <- DOFS\l 26:     add    t18 <- t15, t17\l 27:     add    t19 <- t6, t18\l 28:     param  0 <- @t19\l 29:     call   fun1\l 30:     &()    t20 <- a\l 31:     param  0 <- t20\l 32:     call   fun2\l 33:     &()    t21 <- b\l 34:     param  1 <- 2\l 35:     &()    t22 <- b\l 36:     param  0 <- t22\l 37:     call   t23 <- DIM\l 38:     mul    t24 <- 2, t23\l 39:     add    t25 <- t24, 3\l 40:     param  1 <- 3\l 41:     &()    t26 <- b\l 42:     param  0 <- t26\l 43:     call   t27 <- DIM\l 44:     mul    t28 <- t25, t27\l 45:     add    t29 <- t28, 0\l 46:     mul    t30 <- t29, 4\l 47:     &()    t31 <- b\l 48:     param  0 <- t31\l 49:     call   t32 <- DOFS\l 50:     add    t33 <- t30, t32\l 51:     add    t34 <- t21, t33\l 52:     &()    t35 <- @t34\l 53:     param  0 <- t35\l 54:     call   fun2\l 55:     &()    t36 <- b\l 56:     param  1 <- 2\l 57:     &()    t37 <- b\l 58:     param  0 <- t37\l 59:     call   t38 <- DIM\l 60:     mul    t39 <- 2, t38\l 61:     add    t40 <- t39, 0\l 62:     param  1 <- 3\l 63:     &()    t41 <- b\l 64:     param  0 <- t41\l 65:     call   t42 <- DIM\l 66:     mul    t43 <- t40, t42\l 67:     add    t44 <- t43, 0\l 68:     mul    t45 <- t44, 4\l 69:     &()    t46 <- b\l 70:     param  0 <- t46\l 71:     call   t47 <- DOFS\l 72:     add    t48 <- t45, t47\l 73:     add    t49 <- t36, t48\l 74:     &()    t50 <- @t49\l 75:     param  0 <- t50\l 76:     call   fun3\l 77:     &()    t51 <- b\l 78:     param  0 <- t51\l 79:     call   fun4\l 80:     return \l",shape=box]
+  // scope 'fun1'
+  fun1_cb [label="fun1\r",shape=box]
+  // scope 'fun2'
+  fun2_cb [label="fun2\r",shape=box]
+  // scope 'fun3'
+  fun3_cb [label="fun3\r",shape=box]
+  // scope 'fun4'
+  fun4_cb [label="fun4\r",shape=box]
+};
