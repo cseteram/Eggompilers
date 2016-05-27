@@ -74,7 +74,7 @@ ostream& operator<<(ostream &out, const CType *t)
 //
 bool CScalarType::Match(const CType *t) const
 {
-  // types are singletons and not implicit type conversions are allowed, 
+  // types are singletons and not implicit type conversions are allowed,
   // i.e., for scalar types we can simply compare the pointers
   return (t == this);
 }

@@ -1,0 +1,10 @@
+digraph IR {
+  graph [fontname="Times New Roman",fontsize=10];
+  node  [fontname="Courier New",fontsize=10];
+  edge  [fontname="Times New Roman",fontsize=10];
+
+  // scope 'pstest06'
+  pstest06_cb [label="pstest06\r",shape=box]
+  // scope 'fib'
+  fib_cb [label="fib\r  0:     if     n < 0 goto 1_if_true\l  1:     goto   2_if_false\l  2: 1_if_true:\l  3:     &()    t0 <- _str_1\l  4:     param  0 <- t0\l  5:     call   WriteStr\l  6:     return -1\l  7:     goto   0\l  8: 2_if_false:\l  9:     if     n = 0 goto 7_if_true\l 10:     goto   8_if_false\l 11: 7_if_true:\l 12:     return 0\l 13:     goto   6\l 14: 8_if_false:\l 15:     if     n = 1 goto 12_if_true\l 16:     goto   13_if_false\l 17: 12_if_true:\l 18:     return 1\l 19:     goto   11\l 20: 13_if_false:\l 21:     sub    t1 <- n, 2\l 22:     param  0 <- t1\l 23:     call   t2 <- fib\l 24:     sub    t3 <- n, 1\l 25:     param  0 <- t3\l 26:     call   t4 <- fib\l 27:     add    t5 <- t2, t4\l 28:     return t5\l 29: 11:\l 30: 6:\l 31: 0:\l",shape=box]
+};

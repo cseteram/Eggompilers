@@ -1,5 +1,5 @@
 //
-// test7
+// test7_2
 //
 // IR generation
 //

@@ -1,0 +1,10 @@
+digraph IR {
+  graph [fontname="Times New Roman",fontsize=10];
+  node  [fontname="Courier New",fontsize=10];
+  edge  [fontname="Times New Roman",fontsize=10];
+
+  // scope 'simple07'
+  simple07_cb [label="simple07\r  0:     param  1 <- 1\l  1:     param  0 <- 1\l  2:     call   t0 <- f\l  3:     if     t0 = 1 goto 1\l  4:     param  1 <- 0\l  5:     param  0 <- 1\l  6:     call   t1 <- f\l  7:     if     t1 = 1 goto 1\l  8:     goto   2\l  9: 1:\l 10:     assign t2 <- 1\l 11:     goto   3\l 12: 2:\l 13:     assign t2 <- 0\l 14: 3:\l 15:     assign i <- t2\l",shape=box]
+  // scope 'f'
+  f_cb [label="f\r  0:     if     a = 1 goto 6\l  1:     goto   2\l  2: 6:\l  3:     if     b = 1 goto 5\l  4:     goto   2\l  5: 5:\l  6:     if     a = 1 goto 4\l  7:     goto   2\l  8: 4:\l  9:     if     b = 1 goto 1\l 10:     goto   2\l 11: 1:\l 12:     assign t0 <- 1\l 13:     goto   3\l 14: 2:\l 15:     assign t0 <- 0\l 16: 3:\l 17:     return t0\l",shape=box]
+};

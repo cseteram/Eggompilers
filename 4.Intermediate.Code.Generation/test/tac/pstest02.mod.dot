@@ -1,0 +1,12 @@
+digraph IR {
+  graph [fontname="Times New Roman",fontsize=10];
+  node  [fontname="Courier New",fontsize=10];
+  edge  [fontname="Times New Roman",fontsize=10];
+
+  // scope 'pstest02'
+  pstest02_cb [label="pstest02\r  0:     &()    t0 <- _str_1\l  1:     param  0 <- t0\l  2:     call   WriteStr\l  3:     &()    t1 <- _str_2\l  4:     param  0 <- t1\l  5:     call   WriteStr\l  6:     call   t2 <- input\l  7:     assign a <- t2\l  8:     call   empty\l  9:     if     a = 1 goto 5_if_true\l 10:     goto   6_if_false\l 11: 5_if_true:\l 12:     goto   4\l 13: 6_if_false:\l 14: 4:\l 15:     if     a = 1 goto 9_if_false\l 16:     goto   7\l 17: 9_if_false:\l 18: 7:\l 19:     &()    t3 <- _str_3\l 20:     param  0 <- t3\l 21:     call   WriteStr\l 22: 12_while_cond:\l 23:     if     a = 1 goto 11\l 24:     goto   12_while_cond\l 25: 11:\l 26:     &()    t4 <- _str_4\l 27:     param  0 <- t4\l 28:     call   WriteStr\l 29:     &()    t5 <- _str_5\l 30:     param  0 <- t5\l 31:     call   WriteStr\l",shape=box]
+  // scope 'input'
+  input_cb [label="input\r  0:     call   t0 <- ReadInt\l  1:     assign x <- t0\l  2:     if     x = 0 goto 2_if_true\l  3:     goto   3_if_false\l  4: 2_if_true:\l  5:     return 0\l  6:     goto   1\l  7: 3_if_false:\l  8: 1:\l  9:     return 1\l",shape=box]
+  // scope 'empty'
+  empty_cb [label="empty\r",shape=box]
+};

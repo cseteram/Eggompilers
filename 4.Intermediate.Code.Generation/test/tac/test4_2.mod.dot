@@ -1,0 +1,8 @@
+digraph IR {
+  graph [fontname="Times New Roman",fontsize=10];
+  node  [fontname="Courier New",fontsize=10];
+  edge  [fontname="Times New Roman",fontsize=10];
+
+  // scope 'test4_2'
+  test4_2_cb [label="test4_2\r  0: 1_while_cond:\l  1:     if     i < 3 goto 2_while_body\l  2:     goto   0\l  3: 2_while_body:\l  4:     assign i <- i\l  5: 6_while_cond:\l  6:     if     i < 4 goto 7_while_body\l  7:     goto   5\l  8: 7_while_body:\l  9:     sub    t0 <- i, 1\l 10:     assign i <- t0\l 11:     goto   6_while_cond\l 12: 5:\l 13:     goto   1_while_cond\l 14: 0:\l",shape=box]
+};
