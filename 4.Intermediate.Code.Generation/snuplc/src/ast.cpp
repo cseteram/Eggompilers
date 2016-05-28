@@ -500,23 +500,9 @@ void CAstStatAssign::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstStatAssign::ToTac(CCodeBlock *cb, CTacLabel *next)
 {
-  /*
-  CTacLabel *nextDst = cb->CreateLabel();
-  CTacLabel *nextSrc = cb->CreateLabel();
-
-  CTacAddr *dst = GetLHS()->ToTac(cb, nextDst);
-  cb->AddInstr(nextDst);
-
-  CTacAddr *src = GetRHS()->ToTac(cb, nextSrc);
-  cb->AddInstr(nextSrc);
-
-  cb->AddInstr(new CTacInstr(opAssign, dst, src, NULL));
-  cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
-  */
-
   // CTacAddr *dst = GetLHS()->ToTac(cb);
-  CTacAddr *src = GetRHS()->ToTac(cb);
-  CTacAddr *dst = GetLHS()->ToTac(cb);
+  CTacAddr *src = GetRHS()->ToTac(cb); // gets the TAC of RHS
+  CTacAddr *dst = GetLHS()->ToTac(cb); // gets the TAC of LHS
 
   cb->AddInstr(new CTacInstr(opAssign, dst, src));
   cb->AddInstr(new CTacInstr(opGoto, next));
@@ -572,12 +558,14 @@ CTacAddr* CAstStatCall::ToTac(CCodeBlock *cb, CTacLabel *next)
   CTacTemp *tmp = NULL;
   int n = call->GetNArgs();
 
+  // build param instructions by getting the TAC of each argument
   for (int i = n - 1; i >= 0; i--) {
     CTacAddr *argTac = call->GetArg(i)->ToTac(cb);
     CTacInstr *instr = new CTacInstr(opParam, new CTacConst(i), argTac, NULL);
     cb->AddInstr(instr);
   }
 
+ // Add call instruction
   if (call->GetType() != CTypeManager::Get()->GetNull())
     tmp = cb->CreateTemp(call->GetType());
   cb->AddInstr(new CTacInstr(opCall, tmp, new CTacName(call->GetSymbol()), NULL));
@@ -701,20 +689,12 @@ void CAstStatReturn::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstStatReturn::ToTac(CCodeBlock *cb, CTacLabel *next)
 {
-  /*
-  CTacLabel *nextRetval = cb->CreateLabel();
-
-  CTacAddr *retval = GetExpression()->ToTac(cb, nextRetval);
-  cb->AddInstr(nextRetval);
-
-  cb->AddInstr(new CTacInstr(opReturn, NULL, retval, NULL));
-  cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
-  */
-
   CTacAddr *retval = NULL;
 
+  // if expression exists, set retval to the TAC of the expression
   if (GetExpression() != NULL)
     retval = GetExpression()->ToTac(cb);
+
   cb->AddInstr(new CTacInstr(opReturn, NULL, retval, NULL));
   cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
   return NULL;
@@ -862,6 +842,18 @@ CTacAddr* CAstStatIf::ToTac(CCodeBlock *cb, CTacLabel *next)
   CTacLabel *nextFalse = cb->CreateLabel("if_false");
   CAstStatement *ifBody = GetIfBody(), *elseBody = GetElseBody();
 
+  /* The TAC of CAstStatIf has the form as follwing;
+   *
+   * if (the condition is true) goto if_true
+   * goto if_false
+   * if_true:
+   *   (ifBody statement sequence)
+   *   goto next
+   * if_false:
+   *   (elseBody statement sequence)
+   * next:
+   */
+
   GetCondition()->ToTac(cb, nextTrue, nextFalse);
 
   // CTacLabel *ifEnd = cb->CreateLabel();
@@ -997,6 +989,17 @@ CTacAddr* CAstStatWhile::ToTac(CCodeBlock *cb, CTacLabel *next)
   CTacLabel *cond = cb->CreateLabel("while_cond");
   CTacLabel *body = cb->CreateLabel("while_body");
   CAstStatement *bodyStat = GetBody();
+
+  /* The TAC of CAstStatIf has the form as follwing;
+   *
+   * while_cond:
+   *   if (the condition is true) goto while_body
+   *   goto next
+   * while_body:
+   *   (whileBody statement sequence)
+   *   goto while_cond
+   * next:
+   */
 
   cb->AddInstr(cond);
   GetCondition()->ToTac(cb, body, next);
@@ -1281,6 +1284,9 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb)
   EOperation oper = GetOperation();
   CTypeManager *tm = CTypeManager::Get();
 
+  /* when oper == "+", "-", "*", or "/",
+   * the expression is an integer type
+   */
   if (oper == opAdd || oper == opSub || oper == opMul || oper == opDiv) {
     CTacAddr *leftTac = left->ToTac(cb), *rightTac = right->ToTac(cb);
     CTacTemp *val = cb->CreateTemp(tm->GetInt());
@@ -1288,6 +1294,7 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb)
     return val;
   }
 
+  /* otherwise, the expression is an boolean type */
   CTacLabel *ltrue = cb->CreateLabel(), *lfalse = cb->CreateLabel();
   CTacLabel *lend = cb->CreateLabel();
   ToTac(cb, ltrue, lfalse);
@@ -1314,14 +1321,27 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb,
     cb->AddInstr(new CTacInstr(opGoto, lfalse));
   }
   else {
+	// short-circuit expression
     if (oper == opAnd) {
-    //  CTacLabel *nextCond = cb->CreateLabel();
+      /* If the current condition is true,
+	   * then look the next condtion.
+	   *
+	   * Otherwise, the total condition is false 
+	   * regardless of the remaining condition.
+	   */
+	
       left->ToTac(cb, nextCond, lfalse);
       cb->AddInstr(nextCond);
       right->ToTac(cb, ltrue, lfalse);
     }
     else {
-    //  CTacLabel *nextCond = cb->CreateLabel();
+      /* If the current condition is true,
+	   * then the total condition is true
+	   * regardless of the remaining condition.
+
+	   * Otherwise, look the next condition.
+	   */
+
       left->ToTac(cb, ltrue, nextCond);
       cb->AddInstr(nextCond);
       right->ToTac(cb, ltrue, lfalse);
@@ -1467,6 +1487,7 @@ CTacAddr* CAstUnaryOp::ToTac(CCodeBlock *cb)
 
   CTacTemp *retval = NULL;
 
+  // If oper == "+' or "-", the expression is an integer type
   if (oper == opPos || oper == opNeg) {
     CAstConstant *number = dynamic_cast<CAstConstant*>(GetOperand());
 
@@ -1476,6 +1497,9 @@ CTacAddr* CAstUnaryOp::ToTac(CCodeBlock *cb)
       cb->AddInstr(new CTacInstr(oper, retval, operandTac));
     }
     else {
+	  /* For example, if the node is CAstUnaryOp("-", 2147483648),
+       * it returns CTacConstant(CAstConstant(-2147483648))
+	   */
       long long val = number->GetValue();
       if (oper == opNeg)
         val = -val;
@@ -1508,7 +1532,7 @@ CTacAddr* CAstUnaryOp::ToTac(CCodeBlock *cb,
   CAstExpression *operand = GetOperand();
 
   assert(oper == opNot);
-  operand->ToTac(cb, lfalse, ltrue);
+  operand->ToTac(cb, lfalse, ltrue); // just swaps ltrue and lfalse
   // cb->AddInstr(new CTacInstr(opEqual, lfalse, operand->ToTac(cb), new CTacConst(1)));
 
   return NULL;
@@ -1748,6 +1772,8 @@ void CAstFunctionCall::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstFunctionCall::ToTac(CCodeBlock *cb)
 {
+  // similar to CAstStatCall::ToTac(CCodeBlock *cb)
+
   int n = GetNArgs();
 
   for (int i = n - 1; i >= 0; i--) {
@@ -2171,7 +2197,12 @@ string CAstConstant::dotAttr(void) const
 
 CTacAddr* CAstConstant::ToTac(CCodeBlock *cb)
 {
-  // 1<<31 What should we do oh my god?
+  /* 1<<31 What should we do oh my god?
+   *
+   * calm down. this is egger's trap card.
+   * when 1<<31, it will be specially treated 
+   * in CAstUnaryOp::ToTac(CCodeBlock *cb).
+   */
   return new CTacConst(GetValue());
 }
 
