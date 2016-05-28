@@ -1,8 +1,0 @@
-digraph IR {
-  graph [fontname="Times New Roman",fontsize=10];
-  node  [fontname="Courier New",fontsize=10];
-  edge  [fontname="Times New Roman",fontsize=10];
-
-  // scope 'simple13'
-  simple13_cb [label="simple13\r  0:     goto   2\l  1:     assign t0 <- 1\l  2:     goto   3\l  3: 2:\l  4:     assign t0 <- 0\l  5: 3:\l  6:     assign res <- t0\l",shape=box]
-};

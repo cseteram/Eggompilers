@@ -1,8 +1,0 @@
-digraph IR {
-  graph [fontname="Times New Roman",fontsize=10];
-  node  [fontname="Courier New",fontsize=10];
-  edge  [fontname="Times New Roman",fontsize=10];
-
-  // scope 'simple03'
-  simple03_cb [label="simple03\r  0: 1_while_cond:\l  1:     if     i < 3 goto 3\l  2:     goto   0\l  3: 3:\l  4:     if     i < 4 goto 2_while_body\l  5:     goto   0\l  6: 2_while_body:\l  7:     add    t0 <- sum, i\l  8:     assign sum <- t0\l  9:     add    t1 <- i, 1\l 10:     assign i <- t1\l 11:     goto   1_while_cond\l 12: 0:\l",shape=box]
-};

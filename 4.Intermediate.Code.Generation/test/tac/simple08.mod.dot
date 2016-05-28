@@ -1,8 +1,0 @@
-digraph IR {
-  graph [fontname="Times New Roman",fontsize=10];
-  node  [fontname="Courier New",fontsize=10];
-  edge  [fontname="Times New Roman",fontsize=10];
-
-  // scope 'simple08'
-  simple08_cb [label="simple08\r  0:     add    t0 <- i, 1\l  1:     assign i <- t0\l  2:     if     j0 = 1 goto 6\l  3:     goto   3\l  4: 6:\l  5:     if     j1 = 1 goto 5\l  6:     goto   3\l  7: 5:\l  8:     if     j2 = 1 goto 2\l  9:     goto   3\l 10: 2:\l 11:     assign t1 <- 1\l 12:     goto   4\l 13: 3:\l 14:     assign t1 <- 0\l 15: 4:\l 16:     assign j <- t1\l 17:     if     j0 = 1 goto 11\l 18:     goto   9\l 19: 11:\l 20:     if     j1 = 1 goto 8\l 21:     goto   9\l 22: 8:\l 23:     assign t2 <- 1\l 24:     goto   10\l 25: 9:\l 26:     assign t2 <- 0\l 27: 10:\l 28:     assign j <- t2\l 29:     add    t3 <- i, i\l 30:     assign i <- t3\l 31:     if     i > 2 goto 14\l 32:     goto   15\l 33: 14:\l 34:     assign t4 <- 1\l 35:     goto   16\l 36: 15:\l 37:     assign t4 <- 0\l 38: 16:\l 39:     assign k <- t4\l 40:     if     l = l0 goto 19\l 41:     goto   20\l 42: 19:\l 43:     assign t5 <- 1\l 44:     goto   21\l 45: 20:\l 46:     assign t5 <- 0\l 47: 21:\l 48:     assign l <- t5\l 49:     return \l",shape=box]
-};
