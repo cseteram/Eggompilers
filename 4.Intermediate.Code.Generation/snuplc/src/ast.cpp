@@ -258,9 +258,8 @@ CTacAddr* CAstScope::ToTac(CCodeBlock *cb)
     s = s->GetNext();
   }
 
+  // removes redundant labels and goto instructions.
   cb->CleanupControlFlow();
-  // this code removes redundant labels and goto instructions.
-  // activate it after the implementation is complete.
 
   return NULL;
 }
@@ -692,11 +691,12 @@ CTacAddr* CAstStatReturn::ToTac(CCodeBlock *cb, CTacLabel *next)
   CTacAddr *retval = NULL;
 
   // if expression exists, set retval to the TAC of the expression
-  if (GetExpression() != NULL)
+  if (GetExpression())
     retval = GetExpression()->ToTac(cb);
 
   cb->AddInstr(new CTacInstr(opReturn, NULL, retval, NULL));
   cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
+
   return NULL;
 }
 
@@ -856,8 +856,6 @@ CTacAddr* CAstStatIf::ToTac(CCodeBlock *cb, CTacLabel *next)
 
   GetCondition()->ToTac(cb, nextTrue, nextFalse);
 
-  // CTacLabel *ifEnd = cb->CreateLabel();
-
   cb->AddInstr(nextTrue);
   while (ifBody) {
     CTacLabel *nextIfBody = cb->CreateLabel();
@@ -874,9 +872,7 @@ CTacAddr* CAstStatIf::ToTac(CCodeBlock *cb, CTacLabel *next)
     cb->AddInstr(nextElseBody);
     elseBody = elseBody->GetNext();
   }
-  // cb->AddInstr(new CTacInstr(opGoto, ifEnd, NULL, NULL));
 
-  // cb->AddInstr(ifEnd);
   cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
 
   return NULL;
@@ -1004,8 +1000,6 @@ CTacAddr* CAstStatWhile::ToTac(CCodeBlock *cb, CTacLabel *next)
   cb->AddInstr(cond);
   GetCondition()->ToTac(cb, body, next);
 
-  // CTacLabel *end = cb->CreateLabel();
-
   cb->AddInstr(body);
   while (bodyStat) {
     CTacLabel *nextBody = cb->CreateLabel();
@@ -1015,8 +1009,6 @@ CTacAddr* CAstStatWhile::ToTac(CCodeBlock *cb, CTacLabel *next)
   }
 
   cb->AddInstr(new CTacInstr(opGoto, cond, NULL, NULL));
-
-  // cb->AddInstr(end);
   cb->AddInstr(new CTacInstr(opGoto, next, NULL, NULL));
 
   return NULL;
@@ -1517,6 +1509,7 @@ CTacAddr* CAstUnaryOp::ToTac(CCodeBlock *cb)
     cb->AddInstr(ltrue);
     cb->AddInstr(new CTacInstr(opAssign, retval, new CTacConst(1), NULL));
     cb->AddInstr(new CTacInstr(opGoto, lend));
+
     cb->AddInstr(lfalse);
     cb->AddInstr(new CTacInstr(opAssign, retval, new CTacConst(0), NULL));
     cb->AddInstr(lend);
@@ -1648,7 +1641,9 @@ CTacAddr* CAstSpecialOp::ToTac(CCodeBlock *cb)
   CTacAddr *src = operand->ToTac(cb);
   CTacTemp *ret =
     cb->CreateTemp(CTypeManager::Get()->GetPointer(operand->GetType()));
+
   cb->AddInstr(new CTacInstr(opAddress, ret, src, NULL));
+
   return ret;
 }
 
@@ -1792,6 +1787,7 @@ CTacAddr* CAstFunctionCall::ToTac(CCodeBlock *cb,
                                   CTacLabel *ltrue, CTacLabel *lfalse)
 {
   CTacAddr *retval = ToTac(cb);
+
   cb->AddInstr(new CTacInstr(opEqual, ltrue, retval, new CTacConst(1)));
   cb->AddInstr(new CTacInstr(opGoto, lfalse, NULL, NULL));
 
@@ -1870,8 +1866,7 @@ void CAstDesignator::toDot(ostream &out, int indent) const
 
 CTacAddr* CAstDesignator::ToTac(CCodeBlock *cb)
 {
-  CTacName *var = new CTacName(GetSymbol());
-  return var;
+  return new CTacName(GetSymbol());
 }
 
 CTacAddr* CAstDesignator::ToTac(CCodeBlock *cb,
@@ -1879,6 +1874,7 @@ CTacAddr* CAstDesignator::ToTac(CCodeBlock *cb,
 {
   cb->AddInstr(new CTacInstr(opEqual, ltrue, ToTac(cb), new CTacConst(1)));
   cb->AddInstr(new CTacInstr(opGoto, lfalse, NULL, NULL));
+
   return NULL;
 }
 
@@ -2108,6 +2104,7 @@ CTacAddr* CAstArrayDesignator::ToTac(CCodeBlock *cb,
                                      CTacLabel *ltrue, CTacLabel *lfalse)
 {
   CTacAddr *ret = ToTac(cb);
+
   cb->AddInstr(new CTacInstr(opEqual, ltrue, ret, new CTacConst(1)));
   cb->AddInstr(new CTacInstr(opGoto, lfalse, NULL, NULL));
 
