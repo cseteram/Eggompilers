@@ -986,7 +986,7 @@ CTacAddr* CAstStatWhile::ToTac(CCodeBlock *cb, CTacLabel *next)
   CTacLabel *body = cb->CreateLabel("while_body");
   CAstStatement *bodyStat = GetBody();
 
-  /* The TAC of CAstStatIf has the form as follwing;
+  /* The TAC of CAstStatWhile has the form as follwing;
    *
    * while_cond:
    *   if (the condition is true) goto while_body
@@ -1315,12 +1315,12 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb,
   else {
 	// short-circuit expression
     if (oper == opAnd) {
-      /* If the current condition is true,
-	   * then look the next condtion.
-	   *
-	   * Otherwise, the total condition is false 
-	   * regardless of the remaining condition.
-	   */
+			/* If the current condition is true,
+			 * then look the next condtion.
+			 *
+			 * Otherwise, the total condition is false 
+			 * regardless of the remaining condition.
+			 */
 	
       left->ToTac(cb, nextCond, lfalse);
       cb->AddInstr(nextCond);
@@ -1328,11 +1328,11 @@ CTacAddr* CAstBinaryOp::ToTac(CCodeBlock *cb,
     }
     else {
       /* If the current condition is true,
-	   * then the total condition is true
-	   * regardless of the remaining condition.
-
-	   * Otherwise, look the next condition.
-	   */
+	    * then the total condition is true
+	    * regardless of the remaining condition.
+			*
+	    * Otherwise, look the next condition.
+	    */
 
       left->ToTac(cb, ltrue, nextCond);
       cb->AddInstr(nextCond);
@@ -1489,9 +1489,10 @@ CTacAddr* CAstUnaryOp::ToTac(CCodeBlock *cb)
       cb->AddInstr(new CTacInstr(oper, retval, operandTac));
     }
     else {
-	  /* For example, if the node is CAstUnaryOp("-", 2147483648),
+			/* For example, if the node is CAstUnaryOp("-", 2147483648),
        * it returns CTacConstant(CAstConstant(-2147483648))
-	   */
+	     */
+
       long long val = number->GetValue();
       if (oper == opNeg)
         val = -val;
