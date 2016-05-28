@@ -15,6 +15,11 @@ begin
     return -1
 end f;
 
+function g() : integer;
+begin
+    return -1
+end g;
+
 begin
     WriteInt(f(a))
 end pstest04.
