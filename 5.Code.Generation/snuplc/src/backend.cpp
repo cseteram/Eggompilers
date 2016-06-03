@@ -133,10 +133,15 @@ void CBackendx86::EmitCode(void)
        << _ind << ".extern WriteLn" << endl
        << endl;
 
-  // TODO
-  // forall s in subscopes do
-  //   EmitScope(s)
-  // EmitScope(program)
+  /*
+   * forall s in subscopes do
+   *   EmitScope(s)
+   * EmitScope(program)
+   */
+  const vector<CScope*> &subscopes = _m->GetSubscopes();
+  for (const auto &s : subscopes)
+    EmitScope(s);
+  EmitScope(_m);
 
   _out << _ind << "# end of text section" << endl
        << _ind << "#-----------------------------------------" << endl
@@ -184,19 +189,45 @@ void CBackendx86::EmitScope(CScope *scope)
   if (scope->GetParent() == NULL) label = "main";
   else label = scope->GetName();
 
-  // label
+  /* label */
   _out << _ind << "# scope " << scope->GetName() << endl
        << label << ":" << endl;
 
-  // TODO
-  // ComputeStackOffsets(scope)
-  //
-  // emit function prologue
-  //
-  // forall i in instructions do
-  //   EmitInstruction(i)
-  //
-  // emit function epilogue
+  /* ComputeStackOffsets(scope) */
+  _out << _ind << "# stack offsets:" << endl;
+  size_t size = ComputeStackOffsets(scope->GetSymbolTable(), +8, -12);
+  _out << endl;
+
+  /* emit function prologue */
+  _out << _ind << "# prologue" << endl
+       << _ind << "pushl   %%ebp" << endl
+       << _ind << "movl    %%esp, %%ebp" << endl
+       << _ind << "pushl   %%ebx" << endl
+       << _ind << "pushl   %%esi" << endl
+       << _ind << "pushl   %%edi" << endl
+       << _ind << "subl    $" << size << ", %%esp" << endl;
+  // TODO : memset local stack area to 0
+  _out << endl;
+ 
+  /* emit function body */
+  _out << "# function body" << endl;
+  const list<CTacInstr*> &instructions = scope->GetCodeBlock()->GetInstr();
+  /* forall i in instructions do */
+  for (const auto &i : instructions) {
+    /* EmitInstruction(i) */
+    EmitInstruction(i);
+  }
+  _out << endl;
+
+  /* emit function epilogue */
+  _out << label << "_exit:" << endl
+       << _ind << "#epilogue" << endl
+       << _ind << "addl    $" << size << ", %%esp" << endl
+       << _ind << "popl    %%edi" << endl
+       << _ind << "popl    %%esi" << endl
+       << _ind << "popl    %%ebx" << endl
+       << _ind << "popl    %%ebp" << endl
+       << _ind << "ret" << endl;
 
   _out << endl;
 }
@@ -469,18 +500,68 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
   assert(symtab != NULL);
   vector<CSymbol*> slist = symtab->GetSymbols();
 
-  // TODO
-  // foreach local symbol l in slist do
-  //   compute aligned offset on stack and store in symbol l
-  //   set base register to %ebp
-  //
-  // foreach parameter p in slist do
-  //   compute offset on stack and store in symbol p
-  //   set base register to %ebp
-  //
-  // align size
-  //
-  // dump stack frame to assembly file
+  size_t size = 4;
+
+  /* foreach local symbol l in slist do
+   *   compute aligned offset on stack and store in symbol l
+   *   set base register to %ebp
+   */
+  for (const auto &l : slist) {
+    if (l->GetSymbolType() != stLocal)
+      continue;
+
+    const CType* datatype = l->GetDataType();
+    if (datatype->IsInt() || datatype->IsPointer()) {
+      if (local_ofs % 4) {
+        int padding = 4 + local_ofs % 4; /* local_ofs < 0 */
+        size += padding;
+        local_ofs += -padding;
+      }
+
+      size += 4;
+      local_ofs += -4;
+      l->SetOffset(local_ofs);
+      l->SetBaseRegister("%ebp");
+    }
+    else if (datatype->IsChar() || datatype->IsBoolean()) {
+      size += 1;
+      local_ofs += -1;
+      l->SetOffset(local_ofs);
+      l->SetBaseRegister("%ebp");
+    }
+    else if (datatype->IsArray()) {
+      // TODO
+    }
+  }
+
+  /* foreach parameter p in slist do
+   *   compute offset on stack and store in symbol p
+   *   set base register to %ebp
+   */
+  for (const auto &p : slist) {
+    if (p->GetSymbolType() != stParam)
+      continue;
+
+    /* parameter doesn't require alignment rule.
+     * its offset is always (start_param_ofs + 4 * index)
+     */
+    int offset = param_ofs + 4 * dynamic_cast<CSymParam*>(p)->GetIndex();
+    p->SetOffset(offset);
+    p->SetBaseRegister("%ebp");    
+  }
+
+  /* align size */
+  /* dump stack frame to assembly file */
+
+  // TODO : it should equals to snuplc reference...
+  for (const auto &s : slist) {
+    ESymbolType stype = s->GetSymbolType();
+    if (stype != stLocal && stype != stParam)
+      continue;
+
+    _out << _ind << "#" << setw(8) << s->GetOffset() << "(" << s->GetBaseRegister() << ")"
+         << setw(4) << s->GetDataType()->GetSize() << setw(2) << s << endl;
+  }
 
   return size;
 }
