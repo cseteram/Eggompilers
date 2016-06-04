@@ -546,7 +546,6 @@ string CBackendx86::Operand(const CTac *op)
   /* op : type CTacReference */
   const CTacReference *opRef = dynamic_cast<const CTacReference*>(op);
   if (opRef) {
-    // TODO : check that it is true
     const CSymbol *sym = opRef->GetSymbol();
     EmitInstruction("movl", to_string(sym->GetOffset()) + "(" + sym->GetBaseRegister() + "), %edi");
     operand = "(%edi)";
@@ -730,7 +729,6 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
   }
 
   /* dump stack frame to assembly file */
-  // TODO : it should equals to snuplc reference...
   for (const auto &s : slist) {
     ESymbolType stype = s->GetSymbolType();
     if (stype != stLocal && stype != stParam)
