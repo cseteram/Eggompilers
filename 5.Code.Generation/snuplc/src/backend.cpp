@@ -736,7 +736,7 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
     if (stype != stLocal && stype != stParam)
       continue;
 
-    _out << _ind << "#" << setw(8) << s->GetOffset() << "(" << s->GetBaseRegister() << ")"
+    _out << _ind << "#" << setw(7) << std::right << s->GetOffset() << "(" << s->GetBaseRegister() << ")"
          << setw(4) << s->GetDataType()->GetSize() << setw(2) << s << endl;
   }
 
