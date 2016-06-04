@@ -139,8 +139,11 @@ void CBackendx86::EmitCode(void)
    * EmitScope(program)
    */
   const vector<CScope*> &subscopes = _m->GetSubscopes();
-  for (const auto &s : subscopes)
+  for (const auto &s : subscopes) {
+    SetScope(s);
     EmitScope(s);
+  }
+  SetScope(_m);
   EmitScope(_m);
 
   _out << _ind << "# end of text section" << endl
@@ -241,7 +244,7 @@ void CBackendx86::EmitScope(CScope *scope)
   _out << endl;
 
   /* emit function epilogue */
-  _out << "l_" << label << "_exit:" << endl
+  _out << Label("exit") << ":" << endl
        << _ind << "#epilogue" << endl;
   EmitInstruction("addl", "$" + to_string(size) + ", %esp", "remove locals");
   EmitInstruction("popl", "%edi");
@@ -359,35 +362,117 @@ void CBackendx86::EmitInstruction(CTacInstr *i)
   switch (op) {
     // binary operators
     // dst = src1 op src2
-    // TODO
+    case opAdd:
+    case opSub:
+    case opMul:
+    case opDiv:
+    case opAnd:
+    case opOr:
+      Load(i->GetSrc(1), "%eax", cmt.str());
+      Load(i->GetSrc(2), "%ebx");
+      if (op == opAdd)
+        EmitInstruction("addl", "%ebx, %eax");
+      else if (op == opSub)
+        EmitInstruction("subl", "%ebx, %eax");
+      else if (op == opMul)
+        EmitInstruction("imull", "%ebx");
+      else if (op == opDiv) {
+        EmitInstruction("cdq");
+        EmitInstruction("idivl", "%ebx");
+      }
+      else if (op == opAnd) {
+        /* opAnd will not be appeared */
+        EmitInstruction("andl", "%eax, %ebx");
+      }
+      else {
+        /* opOr will not be appeared */
+        EmitInstruction("orl", "%eax, %ebx");
+      }
+
+      Store(i->GetDest(), 'a');
+      break;
+
     // unary operators
     // dst = op src1
-    // TODO
+    case opPos:
+    case opNeg:
+    case opNot:
+      Load(i->GetSrc(1), "%eax", cmt.str());
+      if (op == opNeg)
+        EmitInstruction("negl", "%eax");
+      else if (op == opNot) {
+        /* opNot will not be appeared */
+        EmitInstruction("notl", "%eax");
+      }
+      Store(i->GetDest(), 'a');
+      break;
 
     // memory operations
     // dst = src1
-    // TODO
+    case opAssign:
+      Load(i->GetSrc(1), "%eax", cmt.str());
+      Store(i->GetDest(), 'a');
+      break;
 
     // pointer operations
     // dst = &src1
-    // TODO
+    case opAddress:
+      EmitInstruction("leal", Operand(i->GetSrc(1)) + ", %eax", cmt.str());
+      Store(i->GetDest(), 'a');
+      break;
     // dst = *src1
     case opDeref:
       // opDeref not generated for now
       EmitInstruction("# opDeref", "not implemented", cmt.str());
       break;
 
-
     // unconditional branching
     // goto dst
-    // TODO
+    case opGoto:
+      EmitInstruction("jmp", Label(dynamic_cast<const CTacLabel*>(i->GetDest())), cmt.str());
+      break;
 
     // conditional branching
     // if src1 relOp src2 then goto dst
-    // TODO
+    case opEqual:
+    case opNotEqual:
+    case opLessThan:
+    case opLessEqual:
+    case opBiggerThan:
+    case opBiggerEqual:
+      Load(i->GetSrc(1), "%eax", cmt.str());
+      Load(i->GetSrc(2), "%ebx", cmt.str());
+      EmitInstruction("cmpl", "%ebx, %eax");
+      EmitInstruction("j" + Condition(op), Label(dynamic_cast<const CTacLabel*>(i->GetDest())));
+      break;
 
     // function call-related operations
-    // TODO
+    case opCall:
+    {
+      const CTacName *fun = dynamic_cast<const CTacName*>(i->GetSrc(1));
+      const CSymProc *sym = dynamic_cast<const CSymProc*>(fun->GetSymbol());
+      assert(fun != NULL);
+      assert(sym != NULL);
+
+      EmitInstruction("call", sym->GetName(), cmt.str());
+      if (sym->GetNParams() > 0)
+        EmitInstruction("addl", "$" + to_string(4 * sym->GetNParams()) + ", %esp");
+      if (i->GetDest())
+        Store(i->GetDest(), 'a');
+      break;
+    }
+    case opReturn:
+      if (i->GetSrc(1)) {
+        Store(i->GetSrc(1), 'a', cmt.str());
+        EmitInstruction("jmp", Label("exit"));
+      }
+      else
+        EmitInstruction("jmp", Label("exit"), cmt.str());
+      break;
+    case opParam:
+      Load(i->GetSrc(1), "%eax", cmt.str());
+      EmitInstruction("pushl", "%eax");
+      break;
 
     // special
     case opLabel:
@@ -397,7 +482,6 @@ void CBackendx86::EmitInstruction(CTacInstr *i)
     case opNop:
       EmitInstruction("nop", "", cmt.str());
       break;
-
 
     default:
       EmitInstruction("# ???", "not implemented", cmt.str());
