@@ -206,7 +206,28 @@ void CBackendx86::EmitScope(CScope *scope)
   EmitInstruction("pushl", "%esi");
   EmitInstruction("pushl", "%edi");
   EmitInstruction("subl", "$" + to_string(size) + ", %esp", "make room for locals");
-  // TODO : memset local stack area to 0
+
+  /* memset local stack area to 0
+   * there are 2 different ways depending on total stack offset
+   */
+  if (size >= 20) {
+    _out << endl;
+    EmitInstruction("cld", "", "memset local stack area to 0");
+    EmitInstruction("xorl", "%eax, %eax");
+    EmitInstruction("movl", "$" + to_string(size/4) + ", %ecx");
+    EmitInstruction("mov", "%esp, %edi");
+    EmitInstruction("rep", "stosl");
+  }
+  else if (size > 0) {
+    _out << endl;
+    EmitInstruction("xorl", "%eax, %eax", "memset local stack area to 0");
+    for (int i = size - 4; i >= 0; i -= 4)
+      EmitInstruction("movl", "%eax, " + to_string(i) + "(%esp)");
+  }
+
+  /* emit local data */
+  if (scope->GetParent())
+    EmitLocalData(scope);
   _out << endl;
  
   /* emit function body */
@@ -560,8 +581,13 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
   }
 
   /* align size */
-  /* dump stack frame to assembly file */
+  if (local_ofs % 4) {
+    int padding = 4 + local_ofs % 4;
+    size += padding;
+    local_ofs += -padding;
+  }
 
+  /* dump stack frame to assembly file */
   // TODO : it should equals to snuplc reference...
   for (const auto &s : slist) {
     ESymbolType stype = s->GetSymbolType();
