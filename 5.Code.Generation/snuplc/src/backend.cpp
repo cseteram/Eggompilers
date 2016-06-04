@@ -199,18 +199,18 @@ void CBackendx86::EmitScope(CScope *scope)
   _out << endl;
 
   /* emit function prologue */
-  _out << _ind << "# prologue" << endl
-       << _ind << "pushl   %%ebp" << endl
-       << _ind << "movl    %%esp, %%ebp" << endl
-       << _ind << "pushl   %%ebx" << endl
-       << _ind << "pushl   %%esi" << endl
-       << _ind << "pushl   %%edi" << endl
-       << _ind << "subl    $" << size << ", %%esp" << endl;
+  _out << _ind << "# prologue" << endl;
+  EmitInstruction("pushl", "%ebp");
+  EmitInstruction("movl", "%esp, %ebp");
+  EmitInstruction("pushl", "%ebx", "save callee saved registers");
+  EmitInstruction("pushl", "%esi");
+  EmitInstruction("pushl", "%edi");
+  EmitInstruction("subl", "$" + to_string(size) + ", %esp", "make room for locals");
   // TODO : memset local stack area to 0
   _out << endl;
  
   /* emit function body */
-  _out << "# function body" << endl;
+  _out << _ind << "# function body" << endl;
   const list<CTacInstr*> &instructions = scope->GetCodeBlock()->GetInstr();
   /* forall i in instructions do */
   for (const auto &i : instructions) {
@@ -220,15 +220,14 @@ void CBackendx86::EmitScope(CScope *scope)
   _out << endl;
 
   /* emit function epilogue */
-  _out << label << "_exit:" << endl
-       << _ind << "#epilogue" << endl
-       << _ind << "addl    $" << size << ", %%esp" << endl
-       << _ind << "popl    %%edi" << endl
-       << _ind << "popl    %%esi" << endl
-       << _ind << "popl    %%ebx" << endl
-       << _ind << "popl    %%ebp" << endl
-       << _ind << "ret" << endl;
-
+  _out << "l_" << label << "_exit:" << endl
+       << _ind << "#epilogue" << endl;
+  EmitInstruction("addl", "$" + to_string(size) + ", %esp", "remove locals");
+  EmitInstruction("popl", "%edi");
+  EmitInstruction("popl", "%esi");
+  EmitInstruction("popl", "%ebx");
+  EmitInstruction("popl", "%ebp");
+  EmitInstruction("ret");
   _out << endl;
 }
 
@@ -500,7 +499,7 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
   assert(symtab != NULL);
   vector<CSymbol*> slist = symtab->GetSymbols();
 
-  size_t size = 4;
+  size_t size = 0;
 
   /* foreach local symbol l in slist do
    *   compute aligned offset on stack and store in symbol l
@@ -530,7 +529,17 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
       l->SetBaseRegister("%ebp");
     }
     else if (datatype->IsArray()) {
-      // TODO
+      const CType *basetype = dynamic_cast<const CArrayType*>(datatype)->GetBaseType();
+      if (basetype->IsInt() && local_ofs % 4) {
+        int padding = 4 + local_ofs % 4;
+        size += padding;
+        local_ofs += -padding;
+      }
+
+      size += datatype->GetSize();
+      local_ofs += -datatype->GetSize();
+      l->SetOffset(local_ofs);
+      l->SetBaseRegister("%ebp");
     }
   }
 
