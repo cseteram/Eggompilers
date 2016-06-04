@@ -245,7 +245,7 @@ void CBackendx86::EmitScope(CScope *scope)
 
   /* emit function epilogue */
   _out << Label("exit") << ":" << endl
-       << _ind << "#epilogue" << endl;
+       << _ind << "# epilogue" << endl;
   EmitInstruction("addl", "$" + to_string(size) + ", %esp", "remove locals");
   EmitInstruction("popl", "%edi");
   EmitInstruction("popl", "%esi");
@@ -441,7 +441,7 @@ void CBackendx86::EmitInstruction(CTacInstr *i)
     case opBiggerThan:
     case opBiggerEqual:
       Load(i->GetSrc(1), "%eax", cmt.str());
-      Load(i->GetSrc(2), "%ebx", cmt.str());
+      Load(i->GetSrc(2), "%ebx");
       EmitInstruction("cmpl", "%ebx, %eax");
       EmitInstruction("j" + Condition(op), Label(dynamic_cast<const CTacLabel*>(i->GetDest())));
       break;
@@ -463,7 +463,7 @@ void CBackendx86::EmitInstruction(CTacInstr *i)
     }
     case opReturn:
       if (i->GetSrc(1)) {
-        Store(i->GetSrc(1), 'a', cmt.str());
+        Load(i->GetSrc(1), "%eax", cmt.str());
         EmitInstruction("jmp", Label("exit"));
       }
       else
@@ -539,9 +539,41 @@ string CBackendx86::Operand(const CTac *op)
 {
   string operand;
 
-  // TODO
-  // return a string representing op
-  // hint: take special care of references (op of type CTacReference)
+  /* return a string representing op
+   * hint : take special care of references (op of type CTacReference)
+   */
+
+  /* op : type CTacReference */
+  const CTacReference *opRef = dynamic_cast<const CTacReference*>(op);
+  if (opRef) {
+    // TODO : check that it is true
+    const CSymbol *sym = opRef->GetSymbol();
+    EmitInstruction("movl", to_string(sym->GetOffset()) + "(" + sym->GetBaseRegister() + "), %edi");
+    operand = "(%edi)";
+
+    return operand;
+  }
+
+  /* op : type CTacName */
+  const CTacName *opName = dynamic_cast<const CTacName*>(op);
+  if (opName) {
+    const CSymbol *sym = opName->GetSymbol();
+    ESymbolType symbolType = sym->GetSymbolType();
+    if (symbolType == stGlobal || symbolType == stProcedure)
+      operand = sym->GetName();
+    else {
+      operand = to_string(sym->GetOffset()) + "(" + sym->GetBaseRegister() + ")";
+    }
+      
+    return operand;
+  }
+
+  /* op : type CTacConst */
+  const CTacConst *opConst = dynamic_cast<const CTacConst*>(op);
+  if (opConst) {
+    operand = "$" + to_string(opConst->GetValue());
+    return operand;
+  }
 
   return operand;
 }
@@ -589,12 +621,39 @@ int CBackendx86::OperandSize(CTac *t) const
 {
   int size = 4;
 
-  // TODO
-  // compute the size for operand t of type CTacName
-  // Hint: you need to take special care of references (incl. references to pointers!)
-  //       and arrays. Compare your output to that of the reference implementation
-  //       if you are not sure.
+  /* compute the size for operand t of type CTacName
+   * Hint: you need to take special care of references (incl. references to pointers!)
+   *       and arrays. Compare your output to that of the reference implementation
+   *       if you are not sure.
+   */
 
+  /* t : type CTacReference */
+  CTacReference *tRef = dynamic_cast<CTacReference*>(t);
+  if (tRef != NULL) {
+    const CSymbol *deref = tRef->GetDerefSymbol();
+    const CType *dtype = deref->GetDataType();
+    if (dtype->IsPointer() || dtype->IsArray()) {
+      if (dtype->IsPointer())
+        dtype = dynamic_cast<const CPointerType*>(dtype)->GetBaseType();
+      
+      const CType *basetype = dynamic_cast<const CArrayType*>(dtype)->GetBaseType();
+      size = basetype->GetDataSize();
+    }
+    else
+      size = dtype->GetDataSize();
+    return size;
+  }
+
+  /* t : type CTacName */
+  CTacName *tName = dynamic_cast<CTacName*>(t);
+  if (tName != NULL) {
+    size = tName->GetSymbol()->GetDataType()->GetDataSize();
+    return size;
+  }
+
+  /* t : type CTacConst 
+   * constant has the size = 4
+   */
   return size;
 }
 
@@ -634,9 +693,8 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
       l->SetBaseRegister("%ebp");
     }
     else if (datatype->IsArray()) {
-      const CType *basetype = dynamic_cast<const CArrayType*>(datatype)->GetBaseType();
-      if (basetype->IsInt() && local_ofs % 4) {
-        int padding = 4 + local_ofs % 4;
+      if ((local_ofs - datatype->GetSize()) % 4) {
+        int padding = 4 + (local_ofs - datatype->GetSize()) % 4;
         size += padding;
         local_ofs += -padding;
       }
