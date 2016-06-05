@@ -232,13 +232,12 @@ void CBackendx86::EmitScope(CScope *scope)
   if (scope->GetParent())
     EmitLocalData(scope);
   _out << endl;
- 
+
   /* emit function body */
   _out << _ind << "# function body" << endl;
   const list<CTacInstr*> &instructions = scope->GetCodeBlock()->GetInstr();
-  /* forall i in instructions do */
+
   for (const auto &i : instructions) {
-    /* EmitInstruction(i) */
     EmitInstruction(i);
   }
   _out << endl;
@@ -271,7 +270,7 @@ void CBackendx86::EmitGlobalData(CScope *scope)
 
   size_t size = 0;
 
-  for (size_t i=0; i<slist.size(); i++) {
+  for (size_t i = 0; i < slist.size(); i++) {
     CSymbol *s = slist[i];
     const CType *t = s->GetDataType();
 
@@ -336,7 +335,44 @@ void CBackendx86::EmitLocalData(CScope *scope)
 {
   assert(scope != NULL);
 
-  // TODO TODO!
+  CSymtab *st = scope->GetSymbolTable();
+  assert(st != NULL);
+
+  vector<CSymbol*> slist = st->GetSymbols();
+
+  _out << dec;
+
+  size_t size = 0;
+
+  for (size_t i = 0; i < slist.size(); i++) {
+    CSymbol *s = slist[i];
+    const CType *t = s->GetDataType();
+
+    if (t->IsArray()) {
+      const CArrayType *a = dynamic_cast<const CArrayType*>(t);
+      assert(a != NULL);
+
+      int dim = a->GetNDim();
+      int ofs = s->GetOffset();
+      string reg = s->GetBaseRegister();
+
+      string arg = Imm(dim) + ", " + to_string(ofs) + "(" + reg + ")";
+      string cmt = "local array '" + s->GetName() + "': " + to_string(dim) + " dimensions";
+      EmitInstruction("movl", arg, cmt);
+
+      for (int j = 0; j < dim; j++) {
+        int nelem = a->GetNElem();
+        ofs += 4;
+
+        string arg = Imm(nelem) + ", " + to_string(ofs) + "(" + reg + ")";
+        string cmt = "  dimension " + to_string(j + 1) + ": " + to_string(nelem) + " elements";
+        EmitInstruction("movl", arg, cmt);
+
+        a = dynamic_cast<const CArrayType*>(a->GetInnerType());
+      }
+    }
+  }
+
 }
 
 void CBackendx86::EmitCodeBlock(CCodeBlock *cb)
@@ -563,7 +599,7 @@ string CBackendx86::Operand(const CTac *op)
     else {
       operand = to_string(sym->GetOffset()) + "(" + sym->GetBaseRegister() + ")";
     }
-      
+
     return operand;
   }
 
@@ -634,7 +670,7 @@ int CBackendx86::OperandSize(CTac *t) const
     if (dtype->IsPointer() || dtype->IsArray()) {
       if (dtype->IsPointer())
         dtype = dynamic_cast<const CPointerType*>(dtype)->GetBaseType();
-      
+
       const CType *basetype = dynamic_cast<const CArrayType*>(dtype)->GetBaseType();
       size = basetype->GetDataSize();
     }
@@ -650,7 +686,7 @@ int CBackendx86::OperandSize(CTac *t) const
     return size;
   }
 
-  /* t : type CTacConst 
+  /* t : type CTacConst
    * constant has the size = 4
    */
   return size;
@@ -718,7 +754,7 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
      */
     int offset = param_ofs + 4 * dynamic_cast<CSymParam*>(p)->GetIndex();
     p->SetOffset(offset);
-    p->SetBaseRegister("%ebp");    
+    p->SetBaseRegister("%ebp");
   }
 
   /* align size */
@@ -735,7 +771,7 @@ size_t CBackendx86::ComputeStackOffsets(CSymtab *symtab,
       continue;
 
     _out << _ind << "#" << setw(7) << std::right << s->GetOffset() << "(" << s->GetBaseRegister() << ")"
-         << setw(4) << s->GetDataType()->GetSize() << setw(2) << s << endl;
+         << setw(4) << std::right << s->GetDataType()->GetSize() << setw(2) << s << endl;
   }
 
   return size;
