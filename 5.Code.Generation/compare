@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+rm -f ./me ./egger
+
+find test/codegen -maxdepth 1 -name "*.mod" -print0 | xargs -0 -L1 -I{} -- sh -c "reference/snuplc {} && cat {}.s >> egger"
+find test/codegen -maxdepth 1 -name "*.mod" -print0 | xargs -0 -L1 -I{} -- sh -c "snuplc/snuplc {} && cat {}.s >> me"
